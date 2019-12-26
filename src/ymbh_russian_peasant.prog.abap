@@ -3,7 +3,6 @@ REPORT ymbh_russian_peasant.
 CLASS lcl_russian_peasant DEFINITION FINAL.
 
   PUBLIC SECTION.
-
     TYPES: BEGIN OF ty_russian_table,
              num1 TYPE i,
              num2 TYPE i,
@@ -19,7 +18,6 @@ CLASS lcl_russian_peasant DEFINITION FINAL.
         VALUE(rs_result) TYPE lcl_russian_peasant=>ty_russian_table.
 
   PRIVATE SECTION.
-
     METHODS first_term_is_odd
       IMPORTING
         iv_value      TYPE i
@@ -74,7 +72,6 @@ CLASS ltc_peasant DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-
     METHODS process_russian_mult_50_32 FOR TESTING.
 
 ENDCLASS.
@@ -84,8 +81,7 @@ CLASS ltc_peasant IMPLEMENTATION.
   METHOD process_russian_mult_50_32.
     DATA(lo_cut) = NEW lcl_russian_peasant( ).
     DATA(ls_result) = lo_cut->perform_russian_multiplication(
-                            VALUE lcl_russian_peasant=>ty_russian_table( num1 = 50
-                                                                         num2 = 32 ) ).
+                            VALUE lcl_russian_peasant=>ty_russian_table( num1 = 50 num2 = 32 ) ).
     cl_abap_unit_assert=>assert_equals(
         msg = 'The result of the russian peasant multiplication with 50 and 32 should be 1600.'
         exp = 1600
@@ -93,3 +89,16 @@ CLASS ltc_peasant IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+SELECTION-SCREEN BEGIN OF BLOCK b01.
+PARAMETERS: p_num1 TYPE i,
+            p_num2 TYPE i.
+SELECTION-SCREEN END OF BLOCK b01.
+
+START-OF-SELECTION.
+
+  DATA(lo_russian_peasant) = NEW lcl_russian_peasant( ).
+  DATA(lv_result) = lo_russian_peasant->perform_russian_multiplication(
+                              VALUE lcl_russian_peasant=>ty_russian_table( num1 = p_num1 num2 = p_num2 )
+                    ).
+  WRITE |The result is { lv_result-num2 }|.
