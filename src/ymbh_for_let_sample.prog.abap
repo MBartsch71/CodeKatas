@@ -67,33 +67,36 @@ CLASS lcl_cd_archive IMPLEMENTATION.
 
 ENDCLASS.
 
-
 CLASS ltc_cd_archive DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    METHODS read_all_albums_from_1991 FOR TESTING.
+    DATA mo_cut TYPE REF TO lcl_cd_archive.
+
+    METHODS setup.
+    METHODS read_all_albums_from_1991     FOR TESTING.
     METHODS investgt_archive_for_pub_date FOR TESTING.
 ENDCLASS.
-
 
 CLASS ltc_cd_archive IMPLEMENTATION.
 
   METHOD read_all_albums_from_1991.
-    DATA(lo_cut) = NEW lcl_cd_archive( ).
     cl_abap_unit_assert=>assert_equals(
         msg = 'The function should return 2 albums.'
         exp = 2
-        act = lines( lo_cut->read_albums_of_year( 1991 ) ) ).
+        act = lines( mo_cut->read_albums_of_year( 1991 ) ) ).
   ENDMETHOD.
 
   METHOD investgt_archive_for_pub_date.
-    DATA(lo_cut) = NEW lcl_cd_archive( ).
     cl_abap_unit_assert=>assert_table_contains(
         line  = |AC/DC published Black Ice 11 years before.|
-        table = lo_cut->get_publishing_infos( )
+        table = mo_cut->get_publishing_infos( )
         msg   = |The expected string should be returned.| ).
+  ENDMETHOD.
+
+  METHOD setup.
+    mo_cut = NEW #( ).
   ENDMETHOD.
 
 ENDCLASS.
