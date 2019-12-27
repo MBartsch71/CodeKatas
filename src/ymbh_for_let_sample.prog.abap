@@ -14,12 +14,17 @@ CLASS lcl_cd_archive DEFINITION.
   PUBLIC SECTION.
     METHODS constructor.
 
+    "! Method reads all albums from a specific year
+    "! @parameter iv_year | The year for to determine the albums
+    "! @parameter rt_albums | A list with all albums from that year
     METHODS read_albums_of_year
       IMPORTING
         iv_year          TYPE i
       RETURNING
         VALUE(rt_albums) TYPE lif_album=>tt_album.
 
+    "! Method provides a list with publishing information
+    "! @parameter rt_publishing_infos | List with information
     METHODS get_publishing_infos
       RETURNING
         VALUE(rt_publishing_infos) TYPE string_table.
