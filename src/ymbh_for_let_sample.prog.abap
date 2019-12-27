@@ -86,6 +86,10 @@ ENDCLASS.
 
 CLASS ltc_cd_archive IMPLEMENTATION.
 
+  METHOD setup.
+    mo_cut = NEW #( ).
+  ENDMETHOD.
+
   METHOD read_all_albums_from_1991.
     cl_abap_unit_assert=>assert_equals(
         msg = 'The function should return 2 albums.'
@@ -98,10 +102,6 @@ CLASS ltc_cd_archive IMPLEMENTATION.
         line  = |AC/DC published Black Ice 11 years before.|
         table = mo_cut->get_publishing_infos( )
         msg   = |The expected string should be returned.| ).
-  ENDMETHOD.
-
-  METHOD setup.
-    mo_cut = NEW #( ).
   ENDMETHOD.
 
 ENDCLASS.
