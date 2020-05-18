@@ -12,6 +12,7 @@ CLASS lcl_fire_alarm IMPLEMENTATION.
 
   METHOD raise_fire_alarm.
     RAISE EVENT the_roof_is_on_fire.
+    ##TODO "MEssage
   ENDMETHOD.
 
 ENDCLASS.
