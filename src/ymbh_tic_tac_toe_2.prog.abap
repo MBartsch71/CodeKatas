@@ -223,6 +223,12 @@ CLASS lcl_game DEFINITION FINAL.
     DATA board         TYPE REF TO lif_board.
     DATA validator     TYPE REF TO lif_validator.
     DATA state_machine TYPE REF TO lif_state_machine.
+    METHODS as_game_is_running
+      RAISING
+        lcx_tictactoe.
+    METHODS check_winner
+      RETURNING
+        VALUE(winner) TYPE char1.
 
 ENDCLASS.
 
@@ -235,15 +241,27 @@ CLASS lcl_game IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD place_turn.
-    me->board->place_turn(  row    = row
-                            column = column
-                            value  = state_machine->state( ) ).
+    as_game_is_running( ).
+    board->place_turn(  row    = row
+                        column = column
+                        value  = state_machine->state( ) ).
+    winner = check_winner( ).
+  ENDMETHOD.
+
+  METHOD check_winner.
     IF validator->player_wins( player          = state_machine->state( )
                                board_as_string = board->stringify( ) ) .
       winner = state_machine->state( ).
       state_machine->final( ).
     ELSE.
       state_machine->next( ).
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD as_game_is_running.
+    IF state_machine->state( ) = 'E'.
+      RAISE EXCEPTION TYPE lcx_tictactoe
+                      MESSAGE e001(00) WITH |The game is over, no more turns allowed!|.
     ENDIF.
   ENDMETHOD.
 
@@ -315,6 +333,7 @@ CLASS ltc_board DEFINITION FINAL FOR TESTING
     METHODS error_at_already_played_field FOR TESTING.
     METHODS error_at_wrong_row_number     FOR TESTING.
     METHODS error_at_wrong_column_number  FOR TESTING.
+
 ENDCLASS.
 
 
@@ -393,6 +412,8 @@ CLASS ltc_board IMPLEMENTATION.
         msg = |Object should be bound.| ).
   ENDMETHOD.
 
+
+
 ENDCLASS.
 
 CLASS ltc_validator DEFINITION FINAL FOR TESTING
@@ -452,10 +473,8 @@ CLASS ltc_game DEFINITION FINAL FOR TESTING
     DATA cut TYPE REF TO lcl_game.
 
     METHODS setup.
-
-    METHODS player_x_win_with_middle_row   FOR TESTING.
-
-
+    METHODS player_x_win_with_middle_row  FOR TESTING.
+    METHODS error_at_turn_after_game_over FOR TESTING.
 ENDCLASS.
 
 
@@ -482,6 +501,22 @@ CLASS ltc_game IMPLEMENTATION.
     ENDTRY.
   ENDMETHOD.
 
+  METHOD error_at_turn_after_game_over.
+    DATA winner TYPE char1.
+    TRY.
+        winner = cut->place_turn( row = 2 column = 2 ).
+        winner = cut->place_turn( row = 1 column = 1 ).
+        winner = cut->place_turn( row = 2 column = 1 ).
+        winner = cut->place_turn( row = 1 column = 2 ).
+        winner = cut->place_turn( row = 2 column = 3 ).
+        winner = cut->place_turn( row = 3 column = 1 ).
 
+      CATCH lcx_tictactoe INTO DATA(lx_error).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_bound(
+        act = lx_error
+        msg = |Object should be bound.| ).
+  ENDMETHOD.
 
 ENDCLASS.
