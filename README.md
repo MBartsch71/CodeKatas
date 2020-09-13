@@ -14,4 +14,4 @@ This is a collection of Code Katas realized in ABAP.
   - Program name: [YMBH_ODD_EVEN_PRIME](src/ymbh_odd_even_prime.prog.abap)
 
 - Tic Tac Toe
-  - Program name: [YMBH_TCI_TAC_TOE_2](src/ymbh_tic_tac_toe_2.prog.abap)
+  - Program name: [YMBH_TIC_TAC_TOE_2](src/ymbh_tic_tac_toe_2.prog.abap)
