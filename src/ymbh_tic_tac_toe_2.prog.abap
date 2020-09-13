@@ -1,5 +1,10 @@
 REPORT ymbh_tic_tac_toe_2.
 
+CLASS lcx_tictactoe DEFINITION INHERITING FROM cx_static_check FINAL.
+  PUBLIC SECTION.
+    INTERFACES if_t100_dyn_msg.
+ENDCLASS.
+
 INTERFACE lif_state_machine.
   TYPES: BEGIN OF status,
            status    TYPE char1,
@@ -13,6 +18,41 @@ INTERFACE lif_state_machine.
   METHODS state
     RETURNING
       VALUE(r_state) TYPE char1.
+ENDINTERFACE.
+
+INTERFACE lif_board.
+  TYPES: BEGIN OF board_line,
+           column1 TYPE char1,
+           column2 TYPE char1,
+           column3 TYPE char1,
+         END OF board_line.
+  TYPES board TYPE STANDARD TABLE OF board_line WITH DEFAULT KEY.
+
+  METHODS get_board
+    RETURNING
+      VALUE(board) TYPE lif_board=>board.
+
+  METHODS place_turn
+    IMPORTING
+      row    TYPE i
+      column TYPE i
+      value  TYPE string
+    RAISING
+      lcx_tictactoe.
+
+  METHODS stringify
+    RETURNING
+      VALUE(result) TYPE string.
+ENDINTERFACE.
+
+INTERFACE lif_validator.
+  METHODS player_wins
+    IMPORTING
+      player          TYPE string
+      board_as_string TYPE string
+    RETURNING
+      VALUE(result)   TYPE abap_bool.
+
 ENDINTERFACE.
 
 CLASS lcl_state DEFINITION FINAL.
@@ -69,7 +109,145 @@ CLASS lcl_state IMPLEMENTATION.
 
 ENDCLASS.
 
+CLASS lcl_board DEFINITION FINAL.
 
+  PUBLIC SECTION.
+    INTERFACES lif_board.
+    ALIASES get_board FOR lif_board~get_board.
+    ALIASES place_turn FOR lif_board~place_turn.
+    ALIASES stringify FOR lif_board~stringify.
+
+    METHODS constructor.
+
+  PRIVATE SECTION.
+    CONSTANTS c_cell_initial TYPE char1 VALUE '-'.
+    DATA board TYPE lif_board=>board.
+
+ENDCLASS.
+
+CLASS lcl_board IMPLEMENTATION.
+
+  METHOD constructor.
+    board = VALUE lif_board=>board( ( column1 = c_cell_initial column2 = c_cell_initial column3 = c_cell_initial )
+                                    ( column1 = c_cell_initial column2 = c_cell_initial column3 = c_cell_initial )
+                                    ( column1 = c_cell_initial column2 = c_cell_initial column3 = c_cell_initial ) ).
+  ENDMETHOD.
+
+  METHOD lif_board~get_board.
+    board = me->board.
+  ENDMETHOD.
+
+  METHOD lif_board~place_turn.
+    TRY.
+        ASSIGN COMPONENT column OF STRUCTURE board[ row ] TO FIELD-SYMBOL(<value>).
+        IF sy-subrc = 0.
+          IF <value> <> c_cell_initial.
+            RAISE EXCEPTION TYPE lcx_tictactoe
+                            MESSAGE i001(00) WITH |The field { row }/{ column } is already played.|.
+          ENDIF.
+          <value> = value.
+        ENDIF.
+      CATCH cx_sy_itab_line_not_found.
+        RAISE EXCEPTION TYPE lcx_tictactoe
+                        MESSAGE i001(00) WITH |Row or column number out of bounds.|.
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD lif_board~stringify.
+    result = REDUCE #( INIT string = ||
+                       FOR row IN board
+                       NEXT string = |{ string }{ row-column1 }{ row-column2 }{ row-column3 }| ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS lcl_validator DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    INTERFACES lif_validator.
+    ALIASES player_wins FOR lif_validator~player_wins.
+
+    METHODS constructor.
+
+  PRIVATE SECTION.
+    DATA winning_patterns TYPE stringtab.
+
+ENDCLASS.
+
+CLASS lcl_validator IMPLEMENTATION.
+
+  METHOD constructor.
+    winning_patterns = VALUE stringtab( ( |XXX++++++| )
+                                        ( |+++XXX+++| )
+                                        ( |++++++XXX| )
+                                        ( |X++X++X++| )
+                                        ( |+X++X++X+| )
+                                        ( |++X++X++X| )
+                                        ( |X+++X+++X| )
+                                        ( |++X+X+X++| )
+                                        ( |OOO++++++| )
+                                        ( |+++OOO+++| )
+                                        ( |++++++OOO| )
+                                        ( |O++O++O++| )
+                                        ( |+O++O++O+| )
+                                        ( |++O++O++O| )
+                                        ( |O+++O+++O| )
+                                        ( |++O+O+O++| ) ).
+  ENDMETHOD.
+
+  METHOD lif_validator~player_wins.
+    LOOP AT winning_patterns ASSIGNING FIELD-SYMBOL(<win_line>) WHERE table_line CS player.
+      IF board_as_string CP <win_line>.
+        result = abap_true.
+        EXIT.
+      ENDIF.
+    ENDLOOP.
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS lcl_game DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    METHODS init_game.
+    METHODS place_turn
+      IMPORTING
+        row           TYPE i
+        column        TYPE i
+      RETURNING
+        VALUE(winner) TYPE char1
+      RAISING
+        lcx_tictactoe.
+
+  PRIVATE SECTION.
+    DATA board         TYPE REF TO lif_board.
+    DATA validator     TYPE REF TO lif_validator.
+    DATA state_machine TYPE REF TO lif_state_machine.
+
+ENDCLASS.
+
+CLASS lcl_game IMPLEMENTATION.
+
+  METHOD init_game.
+    board         = NEW lcl_board( ).
+    validator     = NEW lcl_validator( ).
+    state_machine = NEW lcl_state( ).
+  ENDMETHOD.
+
+  METHOD place_turn.
+    me->board->place_turn(  row    = row
+                            column = column
+                            value  = state_machine->state( ) ).
+    IF validator->player_wins( player          = state_machine->state( )
+                               board_as_string = board->stringify( ) ) .
+      winner = state_machine->state( ).
+      state_machine->final( ).
+    ELSE.
+      state_machine->next( ).
+    ENDIF.
+  ENDMETHOD.
+
+ENDCLASS.
 
 CLASS ltc_state DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -121,5 +299,189 @@ CLASS ltc_state IMPLEMENTATION.
         exp = 'E'
         act = cut->state( ) ).
   ENDMETHOD.
+
+ENDCLASS.
+
+CLASS ltc_board DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO lcl_board.
+
+    METHODS setup.
+    METHODS place_x_to_center             FOR TESTING.
+    METHODS get_board_as_string           FOR TESTING.
+    METHODS error_at_already_played_field FOR TESTING.
+    METHODS error_at_wrong_row_number     FOR TESTING.
+    METHODS error_at_wrong_column_number  FOR TESTING.
+ENDCLASS.
+
+
+CLASS ltc_board IMPLEMENTATION.
+
+  METHOD setup.
+    cut = NEW #( ).
+  ENDMETHOD.
+
+  METHOD place_x_to_center.
+    TRY.
+        cut->place_turn( row = 2 column = 2 value = 'X' ).
+        cl_abap_unit_assert=>assert_equals(
+            exp = VALUE lif_board=>board( ( column1 = '-' column2 = '-' column3 = '-' )
+                                          ( column1 = '-' column2 = 'X' column3 = '-' )
+                                          ( column1 = '-' column2 = '-' column3 = '-' ) )
+            act = cut->get_board( ) ).
+      CATCH lcx_tictactoe.
+        cl_abap_unit_assert=>fail( msg = |'An exception should not occur.| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD get_board_as_string.
+    TRY.
+        cut->place_turn( row = 1 column = 1 value = 'S' ).
+        cut->place_turn( row = 1 column = 2 value = 'T' ).
+        cut->place_turn( row = 1 column = 3 value = 'R' ).
+        cut->place_turn( row = 2 column = 1 value = 'I' ).
+        cut->place_turn( row = 2 column = 2 value = 'N' ).
+        cut->place_turn( row = 2 column = 3 value = 'G' ).
+        cut->place_turn( row = 3 column = 1 value = 'I' ).
+        cut->place_turn( row = 3 column = 2 value = 'F' ).
+        cut->place_turn( row = 3 column = 3 value = 'Y' ).
+
+        cl_abap_unit_assert=>assert_equals(
+            exp = |STRINGIFY|
+            act = cut->stringify( ) ).
+      CATCH lcx_tictactoe.
+        cl_abap_unit_assert=>fail(
+            msg = |'An exception should not occur.| ).
+    ENDTRY.
+
+  ENDMETHOD.
+
+  METHOD error_at_already_played_field.
+    TRY.
+        cut->place_turn( row = 1 column = 1 value = 'X' ).
+        cut->place_turn( row = 1 column = 1 value = 'X' ).
+      CATCH lcx_tictactoe INTO DATA(lx_error).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_bound(
+        act = lx_error
+        msg = |Object should be bound.| ).
+  ENDMETHOD.
+
+  METHOD error_at_wrong_row_number.
+    TRY.
+        cut->place_turn( row = 4  column = 1 value = 'X' ).
+      CATCH lcx_tictactoe INTO DATA(lx_error).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_bound(
+        act = lx_error
+        msg = |Object should be bound.| ).
+  ENDMETHOD.
+
+  METHOD error_at_wrong_column_number.
+    TRY.
+        cut->place_turn( row = 3  column = 0 value = 'X' ).
+      CATCH lcx_tictactoe INTO DATA(lx_error).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_bound(
+        act = lx_error
+        msg = |Object should be bound.| ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS ltc_validator DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO lcl_validator.
+
+    METHODS setup.
+
+    METHODS player_o_has_a_win     FOR TESTING.
+    METHODS player_x_has_no_win    FOR TESTING.
+    METHODS player_x_has_a_win     FOR TESTING.
+    METHODS player_o_has_no_win    FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_validator IMPLEMENTATION.
+
+  METHOD setup.
+    cut = NEW #( ).
+  ENDMETHOD.
+
+  METHOD player_o_has_a_win.
+    cl_abap_unit_assert=>assert_true(
+            act = cut->player_wins( player = 'O'
+                                    board_as_string = |OOOX-X--X| ) ).
+  ENDMETHOD.
+
+  METHOD player_x_has_no_win.
+    cl_abap_unit_assert=>assert_false(
+            act = cut->player_wins( player = 'X'
+                                    board_as_string = |OOOX-X--X| ) ).
+  ENDMETHOD.
+
+  METHOD player_x_has_a_win.
+    cl_abap_unit_assert=>assert_true(
+            act = cut->player_wins( player = 'X'
+                                    board_as_string = |X--OXO--X| ) ).
+  ENDMETHOD.
+
+  METHOD player_o_has_no_win.
+    cl_abap_unit_assert=>assert_false(
+                act = cut->player_wins( player = 'O'
+                                        board_as_string = |O--XO-O-X| ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS ltc_game DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO lcl_game.
+
+    METHODS setup.
+
+    METHODS player_x_win_with_middle_row   FOR TESTING.
+
+
+ENDCLASS.
+
+
+CLASS ltc_game IMPLEMENTATION.
+
+  METHOD setup.
+    cut = NEW #( ).
+    cut->init_game( ).
+  ENDMETHOD.
+
+  METHOD player_x_win_with_middle_row.
+    TRY.
+        cut->place_turn( row = 2 column = 2 ).
+        cut->place_turn( row = 1 column = 1 ).
+        cut->place_turn( row = 2 column = 1 ).
+        cut->place_turn( row = 1 column = 2 ).
+
+        cl_abap_unit_assert=>assert_equals(
+            exp = 'X'
+            act = cut->place_turn( row = 2 column = 3 )
+            msg = 'Player X should be the winner.' ).
+      CATCH lcx_tictactoe.
+        cl_abap_unit_assert=>fail( msg = |'An exception should not occur.| ).
+    ENDTRY.
+  ENDMETHOD.
+
+
 
 ENDCLASS.
