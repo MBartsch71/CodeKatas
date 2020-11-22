@@ -16,4 +16,4 @@ This is a collection of Code Katas realized in ABAP.
   - Program name: [YMBH_TIC_TAC_TOE_2](src/ymbh_tic_tac_toe_2.prog.abap)
 
 - Sudoku
-  - Program name: [YMBH_SUDOKU](src/ymbh_sudoku.abap)
+  - Program name: [YMBH_SUDOKU](src/ymbh_sudoku.prog.abap)
