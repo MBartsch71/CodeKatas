@@ -206,6 +206,108 @@ CLASS lcl_validator IMPLEMENTATION.
 
 ENDCLASS.
 
+CLASS lcl_display DEFINITION.
+  PUBLIC SECTION.
+    METHODS constructor.
+    METHODS display.
+  PRIVATE SECTION.
+    DATA html_tab TYPE cl_abap_browser=>html_table.
+
+    METHODS at_click FOR EVENT sapevent OF cl_abap_browser IMPORTING action.
+
+
+
+
+ENDCLASS.
+
+CLASS lcl_display IMPLEMENTATION.
+
+  METHOD constructor.
+    html_tab = VALUE stringtab(
+                ( `<html>` )
+                (  `<script>function setloc(e){window.location=e;}</script>` )
+                ( `  <style>` )
+                ( `    body { background-color: #d9aa78 }` )
+                ( `    button { background-color: #2d545e;` )
+                ( `             width: 100%;` )
+                ( `             height: 100%;` )
+                ( `             border-top: 0px;` )
+                ( `             border-left: 0px;` )
+                ( `             font-family:Verdana, Geneva, Tahoma, sans-serif;` )
+                ( `             font-size: 4rem;` )
+                ( `             color: #fff;` )
+                ( `             transition-duration: 0.4s }` )
+                ( `    button:hover { background-color: #12343b} `)
+                ( `    .board { display: flexbox;` )
+                ( `             width: 50%;` )
+                ( `             height: 100%;` )
+                ( `             margin: auto;` )
+                ( `             padding: 0px;` )
+                ( `             background-color: #e1b382;`)
+                ( `             box-shadow: 10px 0px 5px rgba(200, 150, 102, 1) }` )
+                ( `    table { margin: 4rem auto;` )
+                ( `            width: 60%;` )
+                ( `            height: 60%}` )
+                ( `    tr { height: 33%;}` )
+                ( `    td { width: 33%; }` )
+                ( `    h1 { font-family:Verdana, Geneva, Tahoma, sans-serif;` )
+                ( `         font-size: 2rem;` )
+                ( `         color: #12343b ;` )
+                ( `         text-align: center;` )
+                ( `         text-shadow: 1px 1px 4px #fff;}` )
+                ( `    .info { font-family: Verdana, Geneva, Tahoma, sans-serif;` )
+                ( `            color: #12343b;` )
+                ( `            font-size: 1.5rem;` )
+                ( `            font-weight: bold;` )
+                ( `            text-align: center; }` )
+                ( `</style>` )
+                ( `<head>` )
+                ( `    <title>Tic Tac Toe @ ABAP</title>` )
+                ( `</head>` )
+                ( `<body>` )
+                ( `    <div class="board">` )
+                ( `        <h1>TicTacToe @ ABAP</h1>` )
+                ( `        <div class="info">Current Player: X</div>` )
+                ( `        <table>` )
+                ( `             <tr>` )
+                ( `                 <td><button type="button" name="1" value="-" onclick="setloc('sapevent:ovr');"></button></td>` )
+                ( `                 <td><button type="button" name="2" value="-"></button></td>` )
+                ( `                 <td><button type="button" name="3" value="-"></button></td>` )
+                ( `             </tr>` )
+                ( `             <tr>` )
+                ( `                 <td><button type="button" name="4" value="-">X</button></td>` )
+                ( `                 <td><button type="button" name="5" value="-"></button></td>` )
+                ( `                 <td><button type="button" name="6" value="-"></button></td>` )
+                ( `             </tr>` )
+                ( `             <tr>` )
+                ( `                 <td><button type="button" name="7" value="-"></button></td>` )
+                ( `                 <td><button type="button" name="8" value="-">O</button></td>` )
+                ( `                 <td><button type="button" name="9" value="-"></button></td>` )
+                ( `             </tr>` )
+                ( `         </table>` )
+                ( `    </div>` )
+                ( ` </body>` )
+                ( `</html>` ) ).
+
+    SET HANDLER at_click.
+  ENDMETHOD.
+
+  METHOD display.
+    cl_abap_browser=>show_html(
+     EXPORTING
+       html         = html_tab
+       title        = 'TicTacToe'
+       size         = cl_abap_browser=>large
+       modal        = abap_true
+       format       = cl_abap_browser=>landscape ).
+  ENDMETHOD.
+
+  METHOD at_click.
+
+  ENDMETHOD.
+
+ENDCLASS.
+
 CLASS lcl_game DEFINITION FINAL.
 
   PUBLIC SECTION.
@@ -223,6 +325,7 @@ CLASS lcl_game DEFINITION FINAL.
     DATA board         TYPE REF TO lif_board.
     DATA validator     TYPE REF TO lif_validator.
     DATA state_machine TYPE REF TO lif_state_machine.
+    DATA display       TYPE REF TO lcl_display.
     METHODS as_game_is_running
       RAISING
         lcx_tictactoe.
@@ -238,6 +341,8 @@ CLASS lcl_game IMPLEMENTATION.
     board         = NEW lcl_board( ).
     validator     = NEW lcl_validator( ).
     state_machine = NEW lcl_state( ).
+    display       = NEW lcl_display( ).
+    display->display( ).
   ENDMETHOD.
 
   METHOD place_turn.
@@ -266,6 +371,7 @@ CLASS lcl_game IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
 
 CLASS ltc_state DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -520,3 +626,7 @@ CLASS ltc_game IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+START-OF-SELECTION.
+  DATA(lo_game) = NEW lcl_game( ).
+  lo_game->init_game( ).
