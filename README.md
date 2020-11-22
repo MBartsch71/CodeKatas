@@ -6,7 +6,6 @@ This is a collection of Code Katas realized in ABAP.
 
 - Russian Peasant Multiplication
   - For more details visit the following websites:
-    - https://majcon.de/code-kata/function-katas/russian-peasant-multiplication-2/
     - https://en.wikipedia.org/wiki/Ancient_Egyptian_multiplication#Russian_peasant_multiplication
   - Program name: [YMBH_RUSSIAN_PEASANT](src/ymbh_russian_peasant.prog.abap)
 - Odd Even Prime
@@ -15,3 +14,6 @@ This is a collection of Code Katas realized in ABAP.
 
 - Tic Tac Toe
   - Program name: [YMBH_TIC_TAC_TOE_2](src/ymbh_tic_tac_toe_2.prog.abap)
+
+- Sudoku
+  - Program name: [YMBH_SUDOKU](src/ymbh_sudoku.abap)
