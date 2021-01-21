@@ -2,30 +2,25 @@ REPORT ymbh_russian_peasant_2.
 
 INTERFACE lif_number.
 
-  METHODS get_next_value
+  "! Method delivers next double value of number
+  "! @parameter rv_value | Returned double value
+  METHODS get_next_double_value
     RETURNING
       VALUE(rv_value) TYPE i.
 
-  METHODS reset_number.
-
 ENDINTERFACE.
 
-
 INTERFACE lif_binary_number.
+
   TYPES tt_binary TYPE STANDARD TABLE OF i WITH DEFAULT KEY.
 
-  METHODS to_table
-    RETURNING
-      VALUE(rt_bin_table) TYPE tt_binary.
-
+  "! Method delivers the next binary digit of the number
+  "! @parameter rv_bin_digit | Returned binary digit
   METHODS get_next_binary_digit
     RETURNING
       VALUE(rv_bin_digit) TYPE i.
 
-  METHODS reset_digit_count.
-
 ENDINTERFACE.
-
 
 CLASS lcl_left_operand DEFINITION FINAL.
 
@@ -91,10 +86,6 @@ CLASS lcl_left_operand IMPLEMENTATION.
     mt_value_binary_table = build_binary_table( mv_value ).
   ENDMETHOD.
 
-  METHOD lif_binary_number~to_table.
-    rt_bin_table = mt_value_binary_table.
-  ENDMETHOD.
-
   METHOD lif_binary_number~get_next_binary_digit.
     increase_digit_count_by_one( ).
     rv_bin_digit = determine_digit( ).
@@ -121,7 +112,7 @@ CLASS lcl_left_operand IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_digit_to_binary_table.
-    mt_value_binary_table = VALUE #( BASE mt_value_binary_table ( iv_number ) ).
+    INSERT iv_number INTO mt_value_binary_table INDEX 1.
     rt_binary_table = mt_value_binary_table.
   ENDMETHOD.
 
@@ -131,10 +122,6 @@ CLASS lcl_left_operand IMPLEMENTATION.
 
   METHOD calculate_whole_part.
     r_result = iv_number DIV mc_number_2.
-  ENDMETHOD.
-
-  METHOD lif_binary_number~reset_digit_count.
-    CLEAR mv_digit_count.
   ENDMETHOD.
 
   METHOD numbr_greater_then_lower_bound.
@@ -169,7 +156,7 @@ CLASS lcl_right_operand IMPLEMENTATION.
     mv_number_initialized = abap_true.
   ENDMETHOD.
 
-  METHOD lif_number~get_next_value.
+  METHOD lif_number~get_next_double_value.
     double_current_value(  ).
     rv_value = mv_current_value.
   ENDMETHOD.
@@ -180,12 +167,49 @@ CLASS lcl_right_operand IMPLEMENTATION.
     mv_number_initialized = abap_false.
   ENDMETHOD.
 
-  METHOD lif_number~reset_number.
-    mv_number_initialized = abap_true.
-  ENDMETHOD.
+ENDCLASS.
+
+CLASS lcl_russian_peasant DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    METHODS constructor
+      IMPORTING
+        iv_operand_1 TYPE i
+        iv_operand_2 TYPE i.
+
+    "! Method performs the multiplication
+    "! @parameter rv_product | Delivers the result
+    METHODS multiply
+      RETURNING
+        VALUE(rv_product) TYPE i.
+
+  PRIVATE SECTION.
+    CONSTANTS mc_left_operand_processed TYPE i VALUE -1.
+    DATA mo_right_operand TYPE REF TO lcl_right_operand.
+    DATA mo_left_operand  TYPE REF TO lcl_left_operand.
 
 ENDCLASS.
 
+CLASS lcl_russian_peasant IMPLEMENTATION.
+
+  METHOD constructor.
+    mo_left_operand  = NEW #( iv_operand_1 ).
+    mo_right_operand = NEW #( iv_operand_2 ).
+  ENDMETHOD.
+
+  METHOD multiply.
+    DATA(lv_left_operand_value) = mo_left_operand->lif_binary_number~get_next_binary_digit( ).
+
+    WHILE lv_left_operand_value > mc_left_operand_processed.
+      DATA(lv_right_operand) = mo_right_operand->lif_number~get_next_double_value( ).
+      rv_product = COND #( WHEN lv_left_operand_value = 1 THEN rv_product + lv_right_operand
+                           ELSE rv_product ).
+      lv_left_operand_value = mo_left_operand->lif_binary_number~get_next_binary_digit( ).
+
+    ENDWHILE.
+  ENDMETHOD.
+
+ENDCLASS.
 
 CLASS ltc_left_operand DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -195,37 +219,14 @@ CLASS ltc_left_operand DEFINITION FINAL FOR TESTING
     DATA mo_cut TYPE REF TO lcl_left_operand.
 
     METHODS setup.
-    METHODS build_expected_table
-      RETURNING
-        VALUE(rt_expected) TYPE lif_binary_number=>tt_binary.
-
-    METHODS get_binary_table_for_56      FOR TESTING.
     METHODS check_processing_end_for_56  FOR TESTING.
-    METHODS get_binary_digit_after_reset FOR TESTING.
 
 ENDCLASS.
-
 
 CLASS ltc_left_operand IMPLEMENTATION.
 
   METHOD setup.
     mo_cut = NEW #( 56 ).
-  ENDMETHOD.
-
-  METHOD build_expected_table.
-    rt_expected = VALUE #( ( |1| )
-                           ( |1| )
-                           ( |1| )
-                           ( |0| )
-                           ( |0| )
-                           ( |0| ) ).
-  ENDMETHOD.
-
-  METHOD get_binary_table_for_56.
-    cl_abap_unit_assert=>assert_equals(
-        msg = |The binary table should be like expected.|
-        exp = build_expected_table(  )
-        act = mo_cut->lif_binary_number~to_table( ) ).
   ENDMETHOD.
 
   METHOD check_processing_end_for_56.
@@ -238,19 +239,7 @@ CLASS ltc_left_operand IMPLEMENTATION.
         act = mo_cut->lif_binary_number~get_next_binary_digit( ) ).
   ENDMETHOD.
 
-  METHOD get_binary_digit_after_reset.
-    DO 4 TIMES.
-      mo_cut->lif_binary_number~get_next_binary_digit( ).
-    ENDDO.
-    mo_cut->lif_binary_number~reset_digit_count( ).
-    cl_abap_unit_assert=>assert_equals(
-        msg = |The returned binary digit should be the expected one.|
-        exp = 1
-        act = mo_cut->lif_binary_number~get_next_binary_digit( ) ).
-  ENDMETHOD.
-
 ENDCLASS.
-
 
 CLASS ltc_right_operand DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -262,9 +251,8 @@ CLASS ltc_right_operand DEFINITION FINAL FOR TESTING
     METHODS setup.
     METHODS get_dbl_value_after_1st_round  FOR TESTING.
     METHODS get_dbl_value_after_6th_round  FOR TESTING.
-    METHODS get_original_value_after_reset FOR TESTING.
-ENDCLASS.
 
+ENDCLASS.
 
 CLASS ltc_right_operand IMPLEMENTATION.
 
@@ -272,7 +260,7 @@ CLASS ltc_right_operand IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals(
         msg = |The value of the operandf should be like expected.|
         exp = 23
-        act = mo_cut->lif_number~get_next_value( ) ).
+        act = mo_cut->lif_number~get_next_double_value( ) ).
   ENDMETHOD.
 
   METHOD setup.
@@ -281,23 +269,51 @@ CLASS ltc_right_operand IMPLEMENTATION.
 
   METHOD get_dbl_value_after_6th_round.
     DO 5 TIMES.
-      mo_cut->lif_number~get_next_value( ).
+      mo_cut->lif_number~get_next_double_value( ).
     ENDDO.
     cl_abap_unit_assert=>assert_equals(
         msg = |The returned value should be like the expected one.|
         exp = 736
-        act = mo_cut->lif_number~get_next_value( ) ).
-  ENDMETHOD.
-
-  METHOD get_original_value_after_reset.
-    DO 3 TIMES.
-      mo_cut->lif_number~get_next_value( ).
-    ENDDO.
-    mo_cut->lif_number~reset_number( ).
-    cl_abap_unit_assert=>assert_equals(
-        msg = |The original value should be returned.|
-        exp = 23
-        act = mo_cut->lif_number~get_next_value( ) ).
+        act = mo_cut->lif_number~get_next_double_value( ) ).
   ENDMETHOD.
 
 ENDCLASS.
+
+CLASS ltc_russian_peasant DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA mo_cut TYPE REF TO lcl_russian_peasant.
+
+    METHODS setup.
+    METHODS calculate_56_with_42 FOR TESTING.
+ENDCLASS.
+
+CLASS ltc_russian_peasant IMPLEMENTATION.
+
+  METHOD calculate_56_with_42.
+    cl_abap_unit_assert=>assert_equals(
+        msg = |The expected result should be delivered.|
+        exp = 2394
+        act = mo_cut->multiply( ) ).
+  ENDMETHOD.
+
+  METHOD setup.
+    mo_cut = NEW #( iv_operand_1 = 57 iv_operand_2 = 42 ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+SELECTION-SCREEN BEGIN OF LINE.
+SELECTION-SCREEN COMMENT 1(20) TEXT-001 FOR FIELD left_op.
+PARAMETERS: left_op  TYPE i VISIBLE LENGTH 3,
+            right_op TYPE i VISIBLE LENGTH 3.
+
+SELECTION-SCREEN END OF LINE.
+
+START-OF-SELECTION.
+  DATA(lo_russian_peasant) = NEW lcl_russian_peasant( iv_operand_1 = left_op
+                                                      iv_operand_2 = right_op ).
+
+  WRITE: / |The result of the operation { left_op } * { right_op } is { lo_russian_peasant->multiply( ) } .|.
