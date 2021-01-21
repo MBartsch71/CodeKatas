@@ -8,7 +8,9 @@ This is a collection of Code Katas realized in ABAP.
   - For more details visit the following websites:
     - https://en.wikipedia.org/wiki/Ancient_Egyptian_multiplication#Russian_peasant_multiplication
   - Program names: [YMBH_RUSSIAN_PEASANT](src/ymbh_russian_peasant.prog.abap)
-                   [YMBH_RUSSIAN_PEASANT_2)(src/ymbh_russian_peasant_2.prog.abap)
+  
+  
+                   [YMBH_RUSSIAN_PEASANT_2[(src/ymbh_russian_peasant_2.prog.abap)
 - Odd Even Prime
 
   - Program name: [YMBH_ODD_EVEN_PRIME](src/ymbh_odd_even_prime.prog.abap)
