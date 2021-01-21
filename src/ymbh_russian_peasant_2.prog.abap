@@ -1,5 +1,14 @@
 REPORT ymbh_russian_peasant_2.
 
+##TODO "Task 1
+##TODO "Naming auf allen Komponenten
+##TODO "Erkläre komplexe Situationen -> Don't make me think, don't make others think
+##TODO "IOSP verfeinern, auch bei Tests
+
+##TODO "2. Task
+##TODO "Ausgabe der Schritte
+
+
 INTERFACE lif_number.
 
   "! Method delivers next double value of number
@@ -185,8 +194,33 @@ CLASS lcl_russian_peasant DEFINITION FINAL.
 
   PRIVATE SECTION.
     CONSTANTS mc_left_operand_processed TYPE i VALUE -1.
+    CONSTANTS mc_odd_indicator TYPE i VALUE 1.
+
     DATA mo_right_operand TYPE REF TO lcl_right_operand.
     DATA mo_left_operand  TYPE REF TO lcl_left_operand.
+    DATA mv_product       TYPE i.
+
+    METHODS digit_is_applicable
+      IMPORTING
+        iv_value           TYPE i
+      RETURNING
+        VALUE(rv_is_valid) TYPE abap_bool.
+
+    METHODS increase_product
+      IMPORTING
+        iv_number         TYPE i
+      RETURNING
+        VALUE(rv_product) TYPE i.
+
+    METHODS determine_product
+      IMPORTING
+        iv_left_op_digit  TYPE i
+        iv_right_op_value TYPE i
+      RETURNING
+        VALUE(rv_product) TYPE i.
+    METHODS determine_next_right_value
+      RETURNING
+        VALUE(rv_next_right_value) TYPE i.
 
 ENDCLASS.
 
@@ -198,15 +232,38 @@ CLASS lcl_russian_peasant IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD multiply.
-    DATA(lv_left_operand_value) = mo_left_operand->lif_binary_number~get_next_binary_digit( ).
+    DATA lv_right_operand_double_value TYPE i.
 
-    WHILE lv_left_operand_value > mc_left_operand_processed.
-      DATA(lv_right_operand) = mo_right_operand->lif_number~get_next_double_value( ).
-      rv_product = COND #( WHEN lv_left_operand_value = 1 THEN rv_product + lv_right_operand
-                           ELSE rv_product ).
-      lv_left_operand_value = mo_left_operand->lif_binary_number~get_next_binary_digit( ).
+    DATA(lv_left_operand_binary_digit) = mo_left_operand->lif_binary_number~get_next_binary_digit( ).
+    WHILE digit_is_applicable( lv_left_operand_binary_digit ).
 
+      rv_product = determine_product( iv_left_op_digit  = lv_left_operand_binary_digit
+                                      iv_right_op_value = determine_next_right_value( )
+ ).
+      lv_left_operand_binary_digit = mo_left_operand->lif_binary_number~get_next_binary_digit( ).
     ENDWHILE.
+  ENDMETHOD.
+
+  METHOD digit_is_applicable.
+    rv_is_valid = xsdbool( iv_value > mc_left_operand_processed ).
+  ENDMETHOD.
+
+  METHOD increase_product.
+    mv_product = mv_product + iv_number.
+    rv_product = mv_product.
+  ENDMETHOD.
+
+  METHOD determine_product.
+    rv_product = SWITCH #( iv_left_op_digit
+                                       WHEN mc_odd_indicator
+                                           THEN increase_product( iv_right_op_value )
+                                       ELSE mv_product ).
+  ENDMETHOD.
+
+
+
+  METHOD determine_next_right_value.
+    rv_next_right_value = mo_right_operand->lif_number~get_next_double_value( ).
   ENDMETHOD.
 
 ENDCLASS.
