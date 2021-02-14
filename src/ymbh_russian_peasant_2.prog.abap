@@ -12,6 +12,15 @@ REPORT ymbh_russian_peasant_2.
 "   - As far as the left operand has the value 1 then the result is calculated
 "   - If the left value is an odd number then the right value is added to the result
 "   - If the left value is even then the right value is ignored
+"
+" Example: 12 x 12
+" -------------------------------------------------------
+" Step 1 | 12 | 12 | Not relevant, left operand is even
+" Step 2 |  6 | 24 | Not relevant, left operand is even
+" Step 3 |  3 | 48 | Relevant, left operand is odd
+" Step 4 |  1 | 96 | Relevant, left operand is odd
+" =======================================================
+" Result: Sum of all lines, where the left operand is odd ( 48 + 96 ) = 144
 
 
 CLASS lcx_russian_peasant DEFINITION INHERITING FROM cx_dynamic_check.
@@ -41,12 +50,12 @@ ENDINTERFACE.
 "! All lines which are marked as relevant are added up to the result.</p>
 INTERFACE lif_russian_peasant.
   TYPES: BEGIN OF ts_step,
-           index     TYPE i,
+           number    TYPE i,
            operand_1 TYPE i,
            operand_2 TYPE i,
            relevant  TYPE abap_bool,
          END OF ts_step.
-  TYPES tt_steps TYPE SORTED TABLE OF ts_step WITH UNIQUE KEY primary_key COMPONENTS index.
+  TYPES tt_steps TYPE SORTED TABLE OF ts_step WITH UNIQUE KEY primary_key COMPONENTS number.
 
   "! This method is the template for processing the single steps of the operation.
   "! @parameter io_left_operand | The left operand
@@ -62,7 +71,7 @@ INTERFACE lif_russian_peasant.
 ENDINTERFACE.
 
 
-CLASS lcl_left_operand DEFINITION FINAL.
+CLASS lcl_left_operand DEFINITION.
 
   PUBLIC SECTION.
     INTERFACES lif_operand.
@@ -96,7 +105,7 @@ CLASS lcl_left_operand IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS lcl_right_operand DEFINITION FINAL.
+CLASS lcl_right_operand DEFINITION.
 
   PUBLIC SECTION.
     INTERFACES lif_operand.
@@ -123,40 +132,49 @@ CLASS lcl_right_operand IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS lcl_russian_peasant DEFINITION FINAL.
+CLASS lcl_russian_peasant DEFINITION.
 
   PUBLIC SECTION.
     INTERFACES lif_russian_peasant.
 
   PRIVATE SECTION.
+    CONSTANTS mc_start_step TYPE i  VALUE 1.
     DATA mt_steps TYPE lif_russian_peasant=>tt_steps.
 
     METHODS process_first_step    IMPORTING io_operand_2 TYPE REF TO lif_operand
                                             io_operand_1 TYPE REF TO lif_operand.
 
-    METHODS process_further_steps IMPORTING iv_index        TYPE i
-                                            io_operand_1    TYPE REF TO lif_operand
-                                            io_operand_2    TYPE REF TO lif_operand
-                                  RETURNING VALUE(rt_steps) TYPE lif_russian_peasant=>tt_steps.
+    METHODS process_further_steps IMPORTING iv_step_number TYPE i
+                                            io_operand_1   TYPE REF TO lif_operand
+                                            io_operand_2   TYPE REF TO lif_operand.
+
+    METHODS increase_step_by_one  IMPORTING iv_step_number   TYPE i
+                                  RETURNING VALUE(rv_result) TYPE i.
 
 ENDCLASS.
 
 
 CLASS lcl_russian_peasant IMPLEMENTATION.
 
+  METHOD lif_russian_peasant~calculate_result.
+    rv_result = REDUCE #( INIT sum = 0
+                          FOR step IN mt_steps
+                          NEXT sum = COND #( WHEN step-relevant = abap_true THEN sum + step-operand_2
+                                             ELSE sum ) ).
+  ENDMETHOD.
+
   METHOD lif_russian_peasant~process_steps.
     process_first_step( io_operand_1 = io_left_operand
                         io_operand_2 = io_right_operand ).
 
-    mt_steps = VALUE #( BASE mt_steps
-                        ( LINES OF process_further_steps( iv_index     = 1
-                                                          io_operand_1 = io_left_operand->successor( )
-                                                          io_operand_2 = io_right_operand->successor( ) ) ) ).
+    process_further_steps( iv_step_number     = mc_start_step
+                           io_operand_1 = io_left_operand->successor( )
+                           io_operand_2 = io_right_operand->successor( ) ).
     rt_steps = mt_steps.
   ENDMETHOD.
 
   METHOD process_first_step.
-    mt_steps = VALUE #( ( index = 1
+    mt_steps = VALUE #( ( number    = 1
                           operand_1 = io_operand_1->value( )
                           operand_2 = io_operand_2->value( )
                           relevant  = CAST lcl_left_operand( io_operand_1 )->is_odd( ) ) ).
@@ -164,23 +182,20 @@ CLASS lcl_russian_peasant IMPLEMENTATION.
 
   METHOD process_further_steps.
     TRY.
-        rt_steps = process_further_steps( iv_index     = iv_index + 1
-                                          io_operand_1 = io_operand_1->successor( )
-                                          io_operand_2 = io_operand_2->successor( ) ).
+        process_further_steps( iv_step_number = increase_step_by_one( iv_step_number )
+                               io_operand_1   = io_operand_1->successor( )
+                               io_operand_2   = io_operand_2->successor( ) ).
       CATCH lcx_russian_peasant.
     ENDTRY.
 
-    rt_steps = VALUE #( BASE rt_steps ( index = iv_index + 1
+    mt_steps = VALUE #( BASE mt_steps ( number    = increase_step_by_one( iv_step_number )
                                         operand_1 = io_operand_1->value( )
                                         operand_2 = io_operand_2->value( )
-                                        relevant = CAST lcl_left_operand(  io_operand_1 )->is_odd( ) ) ).
+                                        relevant  = CAST lcl_left_operand(  io_operand_1 )->is_odd( ) ) ).
   ENDMETHOD.
 
-  METHOD lif_russian_peasant~calculate_result.
-    rv_result = REDUCE #( INIT sum = 0
-                          FOR step IN mt_steps
-                          NEXT sum = COND #( WHEN step-relevant = abap_true THEN sum + step-operand_2
-                                             ELSE sum ) ).
+  METHOD increase_step_by_one.
+    rv_result = iv_step_number + 1.
   ENDMETHOD.
 
 ENDCLASS.
@@ -217,7 +232,7 @@ CLASS lcl_main IMPLEMENTATION.
       DATA(color) = SWITCH #( <line>-relevant WHEN abap_true THEN col_positive
                                               ELSE col_negative ).
 
-      WRITE / |Step: { <line>-index WIDTH = 2 ALIGN = RIGHT } \| { <line>-operand_1 WIDTH = 4 ALIGN = RIGHT } \| { <line>-operand_2 WIDTH = 4 ALIGN = RIGHT } | COLOR = color.
+      WRITE / |Step: { <line>-number WIDTH = 2 ALIGN = RIGHT } \| { <line>-operand_1 WIDTH = 4 ALIGN = RIGHT } \| { <line>-operand_2 WIDTH = 4 ALIGN = RIGHT } | COLOR = color.
     ENDLOOP.
     WRITE / |=======================|.
     WRITE / |{ lo_russian_peasant->lif_russian_peasant~calculate_result( ) WIDTH = 22 ALIGN = RIGHT }|.
@@ -323,12 +338,12 @@ CLASS ltc_russian_peasant IMPLEMENTATION.
 
   METHOD get_all_steps_for_operation.
     DATA(lt_expectect_values) = VALUE lif_russian_peasant=>tt_steps(
-                                       ( index = 1 operand_1 = 47 operand_2 = 42   relevant = |X| )
-                                       ( index = 2 operand_1 = 23 operand_2 = 84   relevant = |X| )
-                                       ( index = 3 operand_1 = 11 operand_2 = 168  relevant = |X| )
-                                       ( index = 4 operand_1 = 5  operand_2 = 336  relevant = |X| )
-                                       ( index = 5 operand_1 = 2  operand_2 = 672  relevant = | | )
-                                       ( index = 6 operand_1 = 1  operand_2 = 1344 relevant = |X| ) ).
+                                       ( number = 1 operand_1 = 47 operand_2 = 42   relevant = |X| )
+                                       ( number = 2 operand_1 = 23 operand_2 = 84   relevant = |X| )
+                                       ( number = 3 operand_1 = 11 operand_2 = 168  relevant = |X| )
+                                       ( number = 4 operand_1 = 5  operand_2 = 336  relevant = |X| )
+                                       ( number = 5 operand_1 = 2  operand_2 = 672  relevant = | | )
+                                       ( number = 6 operand_1 = 1  operand_2 = 1344 relevant = |X| ) ).
     cl_abap_unit_assert=>assert_equals(
         msg = |The resulting table should be like exected.|
         exp = lt_expectect_values
