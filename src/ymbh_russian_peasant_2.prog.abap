@@ -1,15 +1,10 @@
 REPORT ymbh_russian_peasant_2.
-##TODO "Task 1
-##TODO "Naming auf allen Komponenten
-##TODO "Erkläre komplexe Situationen -> Don't make me think, don't make others think
-##TODO "IOSP verfeinern, auch bei Tests
-
 " The Russian Peasant Multiplication is a way of multiplying two numbers.
 "
 " The algorithm works as follows:
 "   - The left operand is divided by 2, as whole number without rest, till the value is 1
 "   - at the same time the right operand is doubled
-"   - As far as the left operand has the value 1 then the result is calculated
+"   - As soon as the left operand reaches the value 1 the result is calculated
 "   - If the left value is an odd number then the right value is added to the result
 "   - If the left value is even then the right value is ignored
 "
@@ -77,9 +72,13 @@ CLASS lcl_left_operand DEFINITION.
     INTERFACES lif_operand.
 
     METHODS constructor IMPORTING iv_number TYPE i.
+
     METHODS is_odd      RETURNING VALUE(rv_result) TYPE abap_bool.
 
   PRIVATE SECTION.
+    CONSTANTS mc_even_divisor TYPE i VALUE 2.
+    CONSTANTS mc_lower_bound  TYPE i VALUE 1.
+
     DATA mv_value TYPE i.
 
 ENDCLASS.
@@ -95,12 +94,12 @@ CLASS lcl_left_operand IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD lif_operand~successor.
-    ro_result = COND #( WHEN mv_value > 1 THEN NEW lcl_left_operand( mv_value DIV 2 )
-                                          ELSE THROW lcx_russian_peasant(  )  ).
+    ro_result = COND #( WHEN mv_value > mc_lower_bound THEN NEW lcl_left_operand( mv_value DIV mc_even_divisor )
+                                                       ELSE THROW lcx_russian_peasant(  )  ).
   ENDMETHOD.
 
   METHOD is_odd.
-    rv_result = xsdbool( mv_value MOD 2 <> 0 ).
+    rv_result = xsdbool( mv_value MOD mc_even_divisor <> 0 ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -112,6 +111,7 @@ CLASS lcl_right_operand DEFINITION.
     METHODS constructor  IMPORTING iv_value TYPE i.
 
   PRIVATE SECTION.
+    CONSTANTS mc_double_multiplicator TYPE i VALUE 2.
     DATA mv_value TYPE i.
 
 ENDCLASS.
@@ -127,7 +127,7 @@ CLASS lcl_right_operand IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD lif_operand~successor.
-    ro_result = NEW lcl_right_operand( mv_value * 2 ).
+    ro_result = NEW lcl_right_operand( mv_value * mc_double_multiplicator ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -139,6 +139,7 @@ CLASS lcl_russian_peasant DEFINITION.
 
   PRIVATE SECTION.
     CONSTANTS mc_start_step TYPE i  VALUE 1.
+
     DATA mt_steps TYPE lif_russian_peasant=>tt_steps.
 
     METHODS process_first_step    IMPORTING io_operand_2 TYPE REF TO lif_operand
@@ -167,14 +168,14 @@ CLASS lcl_russian_peasant IMPLEMENTATION.
     process_first_step( io_operand_1 = io_left_operand
                         io_operand_2 = io_right_operand ).
 
-    process_further_steps( iv_step_number     = mc_start_step
-                           io_operand_1 = io_left_operand->successor( )
-                           io_operand_2 = io_right_operand->successor( ) ).
+    process_further_steps( iv_step_number = mc_start_step
+                           io_operand_1   = io_left_operand->successor( )
+                           io_operand_2   = io_right_operand->successor( ) ).
     rt_steps = mt_steps.
   ENDMETHOD.
 
   METHOD process_first_step.
-    mt_steps = VALUE #( ( number    = 1
+    mt_steps = VALUE #( ( number    = mc_start_step
                           operand_1 = io_operand_1->value( )
                           operand_2 = io_operand_2->value( )
                           relevant  = CAST lcl_left_operand( io_operand_1 )->is_odd( ) ) ).
@@ -205,37 +206,82 @@ CLASS lcl_main DEFINITION FINAL.
   PUBLIC SECTION.
     METHODS run.
 
+  PRIVATE SECTION.
+    DATA mv_left_operand  TYPE i.
+    DATA mv_right_operand TYPE i.
+    DATA mt_steps  TYPE lif_russian_peasant=>tt_steps.
+    DATA mv_result TYPE i.
+
+    METHODS request_input_values.
+    METHODS process_multiplication.
+    METHODS output_result.
+
+    METHODS print_header.
+    METHODS print_total.
+    METHODS print_steps.
+
+    METHODS determine_line_color IMPORTING iv_line_relevant     TYPE abap_bool
+                                 RETURNING VALUE(rv_line_color) TYPE i.
+
+    METHODS print_step           IMPORTING iv_line TYPE lif_russian_peasant=>ts_step.
+
 ENDCLASS.
 
 CLASS lcl_main IMPLEMENTATION.
 
-
   METHOD run.
-    DATA lv_field1 TYPE i.
-    DATA lv_field2 TYPE i.
+    request_input_values( ).
+    process_multiplication( ).
+    output_result( ).
+  ENDMETHOD.
 
+  METHOD request_input_values.
     cl_demo_input=>add_text( text = |Russian peasant multiplication - Input operands.| ).
     cl_demo_input=>add_field( EXPORTING text  = |Operand 1: |
-                              CHANGING  field = lv_field1 ).
+                              CHANGING  field = mv_left_operand ).
 
     cl_demo_input=>add_field( EXPORTING text  = |Operand 2: |
-                              CHANGING  field = lv_field2 ).
+                              CHANGING  field = mv_right_operand ).
     cl_demo_input=>request( ).
+  ENDMETHOD.
 
-    DATA(lo_russian_peasant) = NEW lcl_russian_peasant( ).
-    DATA(lt_result) = lo_russian_peasant->lif_russian_peasant~process_steps( io_left_operand = NEW lcl_left_operand( lv_field1 )
-                                                                             io_right_operand = NEW lcl_right_operand( lv_field2 ) ).
+  METHOD process_multiplication.
+    DATA(lo_russian_peasant)  = NEW lcl_russian_peasant( ).
+    mt_steps  = lo_russian_peasant->lif_russian_peasant~process_steps( io_left_operand  = NEW lcl_left_operand( mv_left_operand )
+                                                                       io_right_operand = NEW lcl_right_operand( mv_right_operand ) ).
+    mv_result = lo_russian_peasant->lif_russian_peasant~calculate_result( ).
+  ENDMETHOD.
 
-    WRITE / |{ lv_field1  WIDTH = 15 ALIGN = RIGHT } x { lv_field2 WIDTH = 4 ALIGN = RIGHT } |.
+  METHOD output_result.
+    print_header( ).
+    print_steps( ).
+    print_total( ).
+  ENDMETHOD.
+
+  METHOD print_header.
+    WRITE / |{ mv_left_operand  WIDTH = 15 ALIGN = RIGHT } x { mv_right_operand WIDTH = 4 ALIGN = RIGHT } |.
     WRITE / |-----------------------|.
-    LOOP AT lt_result ASSIGNING FIELD-SYMBOL(<line>).
-      DATA(color) = SWITCH #( <line>-relevant WHEN abap_true THEN col_positive
-                                              ELSE col_negative ).
+  ENDMETHOD.
 
-      WRITE / |Step: { <line>-number WIDTH = 2 ALIGN = RIGHT } \| { <line>-operand_1 WIDTH = 4 ALIGN = RIGHT } \| { <line>-operand_2 WIDTH = 4 ALIGN = RIGHT } | COLOR = color.
+  METHOD print_steps.
+    LOOP AT mt_steps ASSIGNING FIELD-SYMBOL(<line>).
+      print_step( <line> ).
     ENDLOOP.
+  ENDMETHOD.
+
+  METHOD print_total.
     WRITE / |=======================|.
-    WRITE / |{ lo_russian_peasant->lif_russian_peasant~calculate_result( ) WIDTH = 22 ALIGN = RIGHT }|.
+    WRITE / |{ mv_result WIDTH = 22 ALIGN = RIGHT }|.
+  ENDMETHOD.
+
+  METHOD print_step.
+    DATA(color) = determine_line_color( iv_line-relevant ).
+    WRITE / |Step: { iv_line-number WIDTH = 2 ALIGN = RIGHT } \| { iv_line-operand_1 WIDTH = 4 ALIGN = RIGHT } \| { iv_line-operand_2 WIDTH = 4 ALIGN = RIGHT } | COLOR = color.
+  ENDMETHOD.
+
+  METHOD determine_line_color.
+    rv_line_color = SWITCH #( iv_line_relevant WHEN abap_true THEN col_positive
+                                               ELSE col_negative ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -253,6 +299,7 @@ CLASS ltc_left_operaand DEFINITION FINAL FOR TESTING
     METHODS check_if_value_is_even      FOR TESTING.
     METHODS get_value_of_successor      FOR TESTING.
     METHODS no_more_operands_at_value_1 FOR TESTING.
+
 ENDCLASS.
 
 
@@ -326,8 +373,13 @@ CLASS ltc_russian_peasant DEFINITION FINAL FOR TESTING
     DATA mo_cut TYPE REF TO lcl_russian_peasant.
 
     METHODS setup.
+    METHODS build_expected_result  RETURNING VALUE(rt_result) TYPE lif_russian_peasant=>tt_steps.
+    METHODS process_multiplication RETURNING VALUE(rt_steps) TYPE lif_russian_peasant=>tt_steps.
+    METHODS calculate_result       RETURNING VALUE(rv_result) TYPE i.
+
     METHODS get_all_steps_for_operation FOR TESTING.
     METHODS get_result_of_operation     FOR TESTING.
+
 ENDCLASS.
 
 CLASS ltc_russian_peasant IMPLEMENTATION.
@@ -337,27 +389,37 @@ CLASS ltc_russian_peasant IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_all_steps_for_operation.
-    DATA(lt_expectect_values) = VALUE lif_russian_peasant=>tt_steps(
-                                       ( number = 1 operand_1 = 47 operand_2 = 42   relevant = |X| )
-                                       ( number = 2 operand_1 = 23 operand_2 = 84   relevant = |X| )
-                                       ( number = 3 operand_1 = 11 operand_2 = 168  relevant = |X| )
-                                       ( number = 4 operand_1 = 5  operand_2 = 336  relevant = |X| )
-                                       ( number = 5 operand_1 = 2  operand_2 = 672  relevant = | | )
-                                       ( number = 6 operand_1 = 1  operand_2 = 1344 relevant = |X| ) ).
     cl_abap_unit_assert=>assert_equals(
         msg = |The resulting table should be like exected.|
-        exp = lt_expectect_values
-        act = mo_cut->lif_russian_peasant~process_steps( io_left_operand = NEW lcl_left_operand( 47 )
-                                     io_right_operand = NEW lcl_right_operand( 42 ) ) ).
+        exp = build_expected_result( )
+        act = process_multiplication( ) ).
   ENDMETHOD.
 
   METHOD get_result_of_operation.
-    mo_cut->lif_russian_peasant~process_steps( io_left_operand = NEW lcl_left_operand( 47 )
-                           io_right_operand = NEW lcl_right_operand( 42 ) ).
+    process_multiplication( ).
     cl_abap_unit_assert=>assert_equals(
         msg = |The result should be 1974.|
         exp = 1974
-        act = mo_cut->lif_russian_peasant~calculate_result( ) ).
+        act = calculate_result( ) ).
+  ENDMETHOD.
+
+  METHOD build_expected_result.
+    rt_result = VALUE lif_russian_peasant=>tt_steps( ( number = 1 operand_1 = 47 operand_2 =   42 relevant = |X| )
+                                                     ( number = 2 operand_1 = 23 operand_2 =   84 relevant = |X| )
+                                                     ( number = 3 operand_1 = 11 operand_2 =  168 relevant = |X| )
+                                                     ( number = 4 operand_1 =  5 operand_2 =  336 relevant = |X| )
+                                                     ( number = 5 operand_1 =  2 operand_2 =  672 relevant = | | )
+                                                     ( number = 6 operand_1 =  1 operand_2 = 1344 relevant = |X| ) ).
+  ENDMETHOD.
+
+  METHOD process_multiplication.
+    rt_steps = mo_cut->lif_russian_peasant~process_steps(
+                 io_left_operand  = NEW lcl_left_operand( 47 )
+                 io_right_operand = NEW lcl_right_operand( 42 ) ).
+  ENDMETHOD.
+
+  METHOD calculate_result.
+    rv_result = mo_cut->lif_russian_peasant~calculate_result( ).
   ENDMETHOD.
 
 ENDCLASS.
