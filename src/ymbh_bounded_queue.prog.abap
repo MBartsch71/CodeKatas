@@ -75,9 +75,9 @@ CLASS lcl_queue DEFINITION.
 
   PROTECTED SECTION.
     DATA mt_queue TYPE tt_queue.
+
     METHODS read_first_item RETURNING VALUE(ro_item) TYPE REF TO object.
     METHODS remove_first_item.
-
 
 ENDCLASS.
 
@@ -109,7 +109,6 @@ CLASS lcl_queue IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
-
 
 CLASS lcl_bounded_queue DEFINITION INHERITING FROM lcl_queue.
 
@@ -240,7 +239,6 @@ CLASS lcl_application IMPLEMENTATION.
 
 ENDCLASS.
 
-
 CLASS ltc_item DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
@@ -249,7 +247,6 @@ CLASS ltc_item DEFINITION FINAL FOR TESTING
     DATA mo_cut TYPE REF TO lcl_item.
     METHODS get_specific_item_id FOR TESTING.
 ENDCLASS.
-
 
 CLASS ltc_item IMPLEMENTATION.
 
@@ -270,6 +267,10 @@ CLASS ltc_queue DEFINITION FINAL FOR TESTING
     DATA mo_cut TYPE REF TO lcl_queue.
 
     METHODS setup.
+    METHODS send_request_x_times    IMPORTING iv_times TYPE i.
+    METHODS receive_request_x_times IMPORTING iv_times       TYPE i
+                                    RETURNING VALUE(ro_item) TYPE REF TO object.
+
     METHODS add_item_to_queue   FOR TESTING.
     METHODS get_item_from_queue FOR TESTING.
     METHODS get_whole_queue     FOR TESTING.
@@ -281,19 +282,28 @@ CLASS ltc_queue IMPLEMENTATION.
     mo_cut = NEW #( ).
   ENDMETHOD.
 
+  METHOD send_request_x_times.
+    DO iv_times TIMES.
+      mo_cut->enqueue( NEW lcl_item( sy-index ) ).
+    ENDDO.
+  ENDMETHOD.
+
+  METHOD receive_request_x_times.
+    DO iv_times TIMES.
+      ro_item = mo_cut->dequeue( ).
+    ENDDO.
+  ENDMETHOD.
+
   METHOD add_item_to_queue.
-    mo_cut->enqueue( NEW lcl_item( 1 ) ) .
+    send_request_x_times( 1 ) .
     cl_abap_unit_assert=>assert_equals(
         exp = 1
         act = mo_cut->get_count( ) ).
   ENDMETHOD.
 
   METHOD get_item_from_queue.
-    DO 2 TIMES.
-      mo_cut->enqueue( NEW lcl_item( sy-index ) ).
-    ENDDO.
-    mo_cut->dequeue( ).
-    DATA(lo_received_item) = CAST lcl_item( mo_cut->dequeue( ) ).
+    send_request_x_times( 2 ).
+    DATA(lo_received_item) = CAST lcl_item( receive_request_x_times( 2 ) ).
 
     cl_abap_unit_assert=>assert_equals(
         exp = 2
@@ -301,9 +311,7 @@ CLASS ltc_queue IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD get_whole_queue.
-    DO 4 TIMES.
-      mo_cut->enqueue( NEW lcl_item( sy-index ) ).
-    ENDDO.
+    send_request_x_times( 4 ).
 
     cl_abap_unit_assert=>assert_equals(
         exp = 4
@@ -362,11 +370,11 @@ CLASS ltc_bounded_queue IMPLEMENTATION.
 
   METHOD get_second_object_from_queue.
     send_requests_x_times( 2 ).
-    DATA(lo_item) = CAST lcl_item( receive_requests_x_times( 2 ) ).
+    DATA(lo_received_item) = receive_requests_x_times( 2 ).
 
     cl_abap_unit_assert=>assert_equals(
         exp = 2
-        act = lo_item->get_id( ) ).
+        act = CAST lcl_item( lo_received_item )->get_id( ) ).
   ENDMETHOD.
 
   METHOD error_at_empty_queue.
