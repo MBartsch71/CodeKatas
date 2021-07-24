@@ -1,136 +1,7 @@
 REPORT ymbh_bounded_queue.
 
+
 CLASS lcx_queue DEFINITION INHERITING FROM cx_no_check.
-ENDCLASS.
-
-INTERFACE lif_sender.
-  EVENTS enqueue   EXPORTING VALUE(o_sender) TYPE REF TO lif_sender.
-
-  METHODS get_item RETURNING VALUE(ro_item) TYPE REF TO object.
-  METHODS send.
-
-ENDINTERFACE.
-
-INTERFACE lif_receiver.
-  EVENTS dequeue    EXPORTING VALUE(o_receiver) TYPE REF TO lif_receiver.
-
-  METHODS set_item IMPORTING io_item TYPE REF TO object.
-  METHODS get_item  RETURNING VALUE(ro_item) TYPE REF TO object.
-  METHODS receive.
-ENDINTERFACE.
-
-
-CLASS lcl_application DEFINITION.
-
-  PUBLIC SECTION.
-    METHODS constructor.
-
-ENDCLASS.
-
-CLASS lcl_application IMPLEMENTATION.
-
-  METHOD constructor.
-    CALL SCREEN 1000.
-  ENDMETHOD.
-
-ENDCLASS.
-
-CLASS lcl_queue DEFINITION FINAL.
-
-  PUBLIC SECTION.
-    TYPES tt_queue TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
-    METHODS enqueue FOR EVENT enqueue OF lif_sender IMPORTING o_sender.
-    METHODS dequeue FOR EVENT dequeue OF lif_receiver IMPORTING o_receiver.
-
-    METHODS constructor IMPORTING iv_size TYPE i.
-
-    METHODS get         RETURNING VALUE(rt_queue) TYPE tt_queue.
-
-  PRIVATE SECTION.
-    DATA mt_queue TYPE tt_queue.
-
-    METHODS push                           IMPORTING io_item TYPE REF TO object.
-
-    METHODS pop                            RETURNING VALUE(ro_object) TYPE REF TO object.
-
-    METHODS get_next_line_for_storing_item RETURNING VALUE(rv_line) TYPE i.
-
-    METHODS exception_at_full_queue        IMPORTING iv_line TYPE i.
-
-    METHODS add_item_to_determined_line    IMPORTING iv_line TYPE i
-                                                     io_item TYPE REF TO object.
-
-    METHODS exception_at_empty_queue.
-
-    METHODS get_first_item_from_queue      RETURNING VALUE(ro_object) TYPE REF TO object.
-
-    METHODS reorganize_queue.
-
-ENDCLASS.
-
-CLASS lcl_queue IMPLEMENTATION.
-
-  METHOD constructor.
-    mt_queue = VALUE #( FOR i = 1 THEN i + 1 UNTIL i = iv_size + 1 (  ) ).
-  ENDMETHOD.
-
-  METHOD get.
-    rt_queue = mt_queue.
-  ENDMETHOD.
-
-  METHOD enqueue.
-    push( o_sender->get_item( ) ).
-  ENDMETHOD.
-
-  METHOD dequeue.
-    o_receiver->set_item( pop( ) ).
-  ENDMETHOD.
-
-  METHOD push.
-    DATA(lv_line) = get_next_line_for_storing_item( ).
-    exception_at_full_queue( lv_line ).
-    add_item_to_determined_line( iv_line = lv_line
-                                 io_item = io_item ).
-  ENDMETHOD.
-
-  METHOD pop.
-    exception_at_empty_queue( ).
-    ro_object = get_first_item_from_queue( ).
-    reorganize_queue( ).
-  ENDMETHOD.
-
-  METHOD get_next_line_for_storing_item.
-    DATA lo_item TYPE REF TO object.
-    rv_line = line_index( mt_queue[ table_line = lo_item ] ).
-  ENDMETHOD.
-
-  METHOD exception_at_full_queue.
-    IF iv_line <= 0.
-      RAISE EXCEPTION TYPE lcx_queue.
-    ENDIF.
-  ENDMETHOD.
-
-  METHOD add_item_to_determined_line.
-    mt_queue[ iv_line ] = io_item.
-  ENDMETHOD.
-
-  METHOD exception_at_empty_queue.
-    IF mt_queue[ 1 ] IS INITIAL.
-      RAISE EXCEPTION TYPE lcx_queue.
-    ENDIF.
-  ENDMETHOD.
-
-  METHOD get_first_item_from_queue.
-    ro_object = mt_queue[ 1 ].
-  ENDMETHOD.
-
-  METHOD reorganize_queue.
-    DELETE mt_queue INDEX 1.
-    APPEND INITIAL LINE TO mt_queue.
-  ENDMETHOD.
-
-
-
 ENDCLASS.
 
 CLASS lcl_item DEFINITION FINAL.
@@ -156,125 +27,219 @@ CLASS lcl_item IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS lcl_sender DEFINITION FINAL.
+CLASS lcl_gui DEFINITION.
 
   PUBLIC SECTION.
-    INTERFACES lif_sender.
-    METHODS constructor IMPORTING io_item TYPE REF TO object.
+    TYPES tt_queue   TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
+    TYPES tt_content TYPE STANDARD TABLE OF text30 WITH DEFAULT KEY.
 
-  PRIVATE SECTION.
-    DATA mo_item TYPE REF TO object.
+    METHODS build_textedits       IMPORTING io_container       TYPE REF TO cl_gui_custom_container
+                                  RETURNING VALUE(ro_textedit) TYPE REF TO cl_gui_textedit.
+
+    METHODS prepare_queue_content IMPORTING it_queue         TYPE tt_queue
+                                  RETURNING VALUE(rt_outtab) TYPE tt_content.
 
 ENDCLASS.
 
-CLASS lcl_sender IMPLEMENTATION.
+CLASS lcl_gui IMPLEMENTATION.
+
+  METHOD build_textedits.
+    ro_textedit = NEW #( parent = io_container ).
+    ro_textedit->set_readonly_mode( cl_gui_textedit=>true ).
+    ro_textedit->auto_redraw( cl_gui_textedit=>false ).
+    ro_textedit->set_statusbar_mode( 0 ).
+    ro_textedit->set_toolbar_mode( 0 ).
+  ENDMETHOD.
+
+  METHOD prepare_queue_content.
+    rt_outtab = VALUE #( FOR <line> IN it_queue
+                          LET lo_item = CAST lcl_item( <line> )
+                              lt_id = COND tt_content( WHEN lo_item IS BOUND
+                                                          THEN VALUE #( ( |{ lo_item->get_id( ) }{ cl_abap_char_utilities=>newline }| )  ) )
+                          IN
+                          ( LINES OF lt_id ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS lcl_queue DEFINITION.
+
+  PUBLIC SECTION.
+    TYPES tt_queue TYPE STANDARD TABLE OF REF TO object WITH DEFAULT KEY.
+
+    METHODS dequeue   RETURNING VALUE(ro_item) TYPE REF TO object.
+    METHODS enqueue   IMPORTING io_item TYPE REF TO object.
+
+    METHODS get_count RETURNING VALUE(rv_count) TYPE i.
+    METHODS get       RETURNING VALUE(rt_queue) TYPE lcl_queue=>tt_queue.
+
+  PROTECTED SECTION.
+    DATA mt_queue TYPE tt_queue.
+    METHODS read_first_item RETURNING VALUE(ro_item) TYPE REF TO object.
+    METHODS remove_first_item.
+
+
+ENDCLASS.
+
+CLASS lcl_queue IMPLEMENTATION.
+
+  METHOD get_count.
+    rv_count = lines( mt_queue ).
+  ENDMETHOD.
+
+  METHOD get.
+    rt_queue = mt_queue.
+  ENDMETHOD.
+
+  METHOD enqueue.
+    APPEND io_item TO mt_queue.
+  ENDMETHOD.
+
+  METHOD dequeue.
+    ro_item = read_first_item( ).
+    remove_first_item( ).
+  ENDMETHOD.
+
+  METHOD read_first_item.
+    ro_item = mt_queue[ 1 ].
+  ENDMETHOD.
+
+  METHOD remove_first_item.
+    DELETE mt_queue INDEX 1.
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS lcl_bounded_queue DEFINITION INHERITING FROM lcl_queue.
+
+  PUBLIC SECTION.
+    METHODS constructor IMPORTING iv_size TYPE i.
+
+    METHODS enqueue REDEFINITION.
+    METHODS dequeue REDEFINITION.
+
+  PRIVATE SECTION.
+
+    METHODS get_next_line_for_storing_item RETURNING VALUE(rv_line) TYPE i.
+
+    METHODS add_item_to_determined_line    IMPORTING iv_line TYPE i
+                                                     io_item TYPE REF TO object.
+
+    METHODS exception_at_full_queue        IMPORTING iv_line TYPE i.
+    METHODS exception_at_empty_queue.
+
+    METHODS reorganize_queue.
+
+ENDCLASS.
+
+CLASS lcl_bounded_queue IMPLEMENTATION.
 
   METHOD constructor.
-    mo_item = io_item.
+    super->constructor( ).
+    mt_queue = VALUE #( FOR i = 1 THEN i + 1 UNTIL i = iv_size + 1 (  ) ).
   ENDMETHOD.
 
-  METHOD lif_sender~get_item.
-    ro_item = mo_item.
+  METHOD enqueue.
+    DATA(lv_line) = get_next_line_for_storing_item( ).
+    exception_at_full_queue( lv_line ).
+    add_item_to_determined_line( iv_line = lv_line
+                                 io_item = io_item ).
   ENDMETHOD.
 
-  METHOD lif_sender~send.
-    RAISE EVENT lif_sender~enqueue EXPORTING o_sender = me.
+  METHOD dequeue.
+    exception_at_empty_queue( ).
+    ro_item = read_first_item( ).
+    reorganize_queue( ).
+  ENDMETHOD.
+
+  METHOD get_next_line_for_storing_item.
+    DATA lo_item TYPE REF TO object.
+    rv_line = line_index( mt_queue[ table_line = lo_item ] ).
+  ENDMETHOD.
+
+  METHOD exception_at_full_queue.
+    IF iv_line <= 0.
+      RAISE EXCEPTION TYPE lcx_queue EXPORTING textid = |Queue full => Request blocked|.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD add_item_to_determined_line.
+    mt_queue[ iv_line ] = io_item.
+  ENDMETHOD.
+
+  METHOD exception_at_empty_queue.
+    IF mt_queue[ 1 ] IS INITIAL.
+      RAISE EXCEPTION TYPE lcx_queue EXPORTING textid = |Queue empty => Request blocked|.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD reorganize_queue.
+    remove_first_item( ).
+    APPEND INITIAL LINE TO mt_queue.
   ENDMETHOD.
 
 ENDCLASS.
 
-CLASS lcl_receiver DEFINITION FINAL.
+CLASS lcl_application DEFINITION FINAL.
 
   PUBLIC SECTION.
-    INTERFACES lif_receiver.
+
+    METHODS constructor.
+    METHODS send_item_to_queue  IMPORTING io_item          TYPE REF TO object
+                                RETURNING VALUE(rv_result) TYPE abap_bool.
+
+    METHODS get_item_from_queue RETURNING VALUE(ro_item)   TYPE REF TO object.
+    METHODS get_sender_queue    RETURNING VALUE(rt_queue) TYPE lcl_queue=>tt_queue.
+    METHODS get_receiver_queue  RETURNING VALUE(rt_queue) TYPE lcl_queue=>tt_queue.
+    METHODS get_message_queue   RETURNING VALUE(rt_queue) TYPE lcl_queue=>tt_queue.
 
   PRIVATE SECTION.
-    DATA mo_item TYPE REF TO object.
+    DATA mo_message_queue  TYPE REF TO lcl_queue.
+    DATA mo_sender_queue   TYPE REF TO lcl_queue.
+    DATA mo_receiver_queue TYPE REF TO lcl_queue.
 
 ENDCLASS.
 
-CLASS lcl_receiver IMPLEMENTATION.
+CLASS lcl_application IMPLEMENTATION.
 
-  METHOD lif_receiver~receive.
-    RAISE EVENT lif_receiver~dequeue EXPORTING o_receiver = me.
+  METHOD constructor.
+    mo_message_queue  = NEW lcl_bounded_queue( 2 ).
+    mo_sender_queue   = NEW lcl_queue( ).
+    mo_receiver_queue = NEW lcl_queue( ).
   ENDMETHOD.
 
-  METHOD lif_receiver~set_item.
-    mo_item = io_item.
-  ENDMETHOD.
-
-  METHOD lif_receiver~get_item.
-    ro_item = mo_item.
-  ENDMETHOD.
-
-ENDCLASS.
-
-
-CLASS ltc_queue DEFINITION FINAL FOR TESTING
-  DURATION SHORT
-  RISK LEVEL HARMLESS.
-
-  PRIVATE SECTION.
-    DATA mo_cut TYPE REF TO lcl_queue.
-
-    METHODS setup.
-
-    METHODS error_at_queue_size_violation FOR TESTING.
-    METHODS get_second_object_from_queue  FOR TESTING.
-    METHODS error_at_empty_queue          FOR TESTING.
-
-ENDCLASS.
-
-CLASS ltc_queue IMPLEMENTATION.
-
-  METHOD setup.
-    mo_cut = NEW #( 2 ).
-  ENDMETHOD.
-
-  METHOD error_at_queue_size_violation.
+  METHOD send_item_to_queue.
     TRY.
-        DO 3 TIMES.
-          DATA(lo_sender) = NEW lcl_sender( NEW lcl_item( sy-index ) ).
-          SET HANDLER mo_cut->enqueue FOR lo_sender.
-          lo_sender->lif_sender~send( ).
-        ENDDO.
-      CATCH lcx_queue INTO DATA(lx_error).
+        mo_message_queue->enqueue( io_item ).
+        rv_result = abap_true.
+      CATCH lcx_queue.
+        mo_sender_queue->enqueue( io_item ).
     ENDTRY.
-
-    cl_abap_unit_assert=>assert_bound(
-        act = lx_error ).
   ENDMETHOD.
 
-  METHOD get_second_object_from_queue.
-    DO 2 TIMES.
-      DATA(lo_sender) = NEW lcl_sender( NEW lcl_item( sy-index ) ).
-      SET HANDLER mo_cut->enqueue FOR lo_sender.
-      lo_sender->lif_sender~send( ).
-    ENDDO.
-    DO 2 TIMES.
-      DATA(lo_receiver) = NEW lcl_receiver( ).
-      SET HANDLER mo_cut->dequeue FOR lo_receiver.
-      lo_receiver->lif_receiver~receive( ).
-      DATA(lo_item) = CAST lcl_item( lo_receiver->lif_receiver~get_item( ) ).
-    ENDDO.
-    cl_abap_unit_assert=>assert_equals(
-        exp = 2
-        act = lo_item->get_id( ) ).
-  ENDMETHOD.
-
-  METHOD error_at_empty_queue.
+  METHOD get_item_from_queue.
     TRY.
-        DATA(lo_receiver) = NEW lcl_receiver( ).
-        SET HANDLER mo_cut->dequeue FOR lo_receiver.
-        lo_receiver->lif_receiver~receive( ).
-      CATCH lcx_queue INTO DATA(lx_error).
+        ro_item = mo_message_queue->dequeue( ).
+      CATCH lcx_queue.
+        mo_receiver_queue->enqueue( ro_item ).
     ENDTRY.
+  ENDMETHOD.
 
-    cl_abap_unit_assert=>assert_bound(
-        act = lx_error ).
+  METHOD get_sender_queue.
+    rt_queue = mo_sender_queue->get( ).
+  ENDMETHOD.
+
+  METHOD get_receiver_queue.
+    rt_queue = mo_receiver_queue->get( ).
+  ENDMETHOD.
+
+  METHOD get_message_queue.
+    rt_queue = mo_message_queue->get( ).
   ENDMETHOD.
 
 ENDCLASS.
+
 
 CLASS ltc_item DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -297,55 +262,206 @@ CLASS ltc_item IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS ltc_sender DEFINITION FINAL FOR TESTING
+CLASS ltc_queue DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    DATA mo_cut TYPE REF TO lcl_sender.
-    METHODS build_sender_with_item FOR TESTING.
+    DATA mo_cut TYPE REF TO lcl_queue.
 
+    METHODS setup.
+    METHODS add_item_to_queue   FOR TESTING.
+    METHODS get_item_from_queue FOR TESTING.
+    METHODS get_whole_queue     FOR TESTING.
 ENDCLASS.
 
+CLASS ltc_queue IMPLEMENTATION.
 
-CLASS ltc_sender IMPLEMENTATION.
+  METHOD setup.
+    mo_cut = NEW #( ).
+  ENDMETHOD.
 
-  METHOD build_sender_with_item.
-    mo_cut = NEW #( NEW lcl_item( 1 ) ).
+  METHOD add_item_to_queue.
+    mo_cut->enqueue( NEW lcl_item( 1 ) ) .
+    cl_abap_unit_assert=>assert_equals(
+        exp = 1
+        act = mo_cut->get_count( ) ).
+  ENDMETHOD.
 
-    cl_abap_unit_assert=>assert_bound(
-        act = mo_cut->lif_sender~get_item( ) ).
+  METHOD get_item_from_queue.
+    DO 2 TIMES.
+      mo_cut->enqueue( NEW lcl_item( sy-index ) ).
+    ENDDO.
+    mo_cut->dequeue( ).
+    DATA(lo_received_item) = CAST lcl_item( mo_cut->dequeue( ) ).
 
+    cl_abap_unit_assert=>assert_equals(
+        exp = 2
+        act = lo_received_item->get_id( ) ).
+  ENDMETHOD.
+
+  METHOD get_whole_queue.
+    DO 4 TIMES.
+      mo_cut->enqueue( NEW lcl_item( sy-index ) ).
+    ENDDO.
+
+    cl_abap_unit_assert=>assert_equals(
+        exp = 4
+        act = lines( mo_cut->get( ) ) ).
   ENDMETHOD.
 
 ENDCLASS.
 
-CLASS ltc_receiver DEFINITION FINAL FOR TESTING
+CLASS ltc_bounded_queue DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    DATA mo_cut TYPE REF TO lcl_receiver.
-    METHODS get_item_from_receiver FOR TESTING.
+    DATA mo_cut TYPE REF TO lcl_bounded_queue.
+
+    METHODS setup.
+
+    METHODS send_requests_x_times    IMPORTING iv_times TYPE i.
+    METHODS receive_requests_x_times IMPORTING iv_times       TYPE i
+                                     RETURNING VALUE(ro_item) TYPE REF TO object.
+
+    METHODS error_at_queue_size_violation FOR TESTING.
+    METHODS get_second_object_from_queue  FOR TESTING.
+    METHODS error_at_empty_queue          FOR TESTING.
+    METHODS get_stack_after_2_events      FOR TESTING.
+
 ENDCLASS.
 
+CLASS ltc_bounded_queue IMPLEMENTATION.
 
-CLASS ltc_receiver IMPLEMENTATION.
+  METHOD setup.
+    mo_cut = NEW #( 2 ).
+  ENDMETHOD.
 
-  METHOD get_item_from_receiver.
-    mo_cut = NEW #( ).
-    mo_cut->lif_receiver~set_item( NEW lcl_item( 1 ) ).
+  METHOD send_requests_x_times.
+    DO iv_times TIMES.
+      mo_cut->enqueue( NEW lcl_item( sy-index ) ).
+    ENDDO.
+  ENDMETHOD.
+
+  METHOD receive_requests_x_times.
+    DO iv_times TIMES.
+      ro_item = mo_cut->dequeue( ).
+    ENDDO.
+  ENDMETHOD.
+
+  METHOD error_at_queue_size_violation.
+    TRY.
+        send_requests_x_times( 3 ).
+      CATCH lcx_queue INTO DATA(lx_error).
+    ENDTRY.
 
     cl_abap_unit_assert=>assert_bound(
-        act = mo_cut->lif_receiver~get_item( ) ).
+        act = lx_error ).
+  ENDMETHOD.
+
+  METHOD get_second_object_from_queue.
+    send_requests_x_times( 2 ).
+    DATA(lo_item) = CAST lcl_item( receive_requests_x_times( 2 ) ).
+
+    cl_abap_unit_assert=>assert_equals(
+        exp = 2
+        act = lo_item->get_id( ) ).
+  ENDMETHOD.
+
+  METHOD error_at_empty_queue.
+    TRY.
+        receive_requests_x_times( 1 ).
+      CATCH lcx_queue INTO DATA(lx_error).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_bound(
+        act = lx_error ).
+  ENDMETHOD.
+
+  METHOD get_stack_after_2_events.
+    send_requests_x_times( 2 ).
+    DATA(lt_stack) = mo_cut->get( ).
+
+    cl_abap_unit_assert=>assert_equals(
+        exp = 2
+        act = CAST lcl_item( lt_stack[ 2 ] )->get_id( ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS ltc_application DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA mo_cut TYPE REF TO lcl_application.
+
+    METHODS setup.
+    METHODS send_request_x_times     IMPORTING iv_times TYPE i.
+    METHODS receiver_request_x_times IMPORTING iv_times       TYPE i
+                                     RETURNING VALUE(ro_item) TYPE REF TO object.
+
+    METHODS send_request_to_queue          FOR TESTING.
+    METHODS get_item_from_queue            FOR TESTING.
+    METHODS fill_sender_queue_at_full_msgs FOR TESTING.
+    METHODS fill_recvr_queue_at_empty_msgs FOR TESTING.
+
+ENDCLASS.
+
+CLASS ltc_application IMPLEMENTATION.
+
+  METHOD setup.
+    mo_cut = NEW #( ).
+  ENDMETHOD.
+
+  METHOD send_request_x_times.
+    DO iv_times TIMES.
+      mo_cut->send_item_to_queue( NEW lcl_item( sy-index ) ).
+    ENDDO.
+  ENDMETHOD.
+
+  METHOD receiver_request_x_times.
+    DO iv_times TIMES.
+      ro_item = mo_cut->get_item_from_queue( ).
+    ENDDO.
+  ENDMETHOD.
+
+  METHOD send_request_to_queue.
+    cl_abap_unit_assert=>assert_true(
+        act =  mo_cut->send_item_to_queue( NEW lcl_item( 1 ) ) ).
+  ENDMETHOD.
+
+  METHOD get_item_from_queue.
+    send_request_x_times( 2 ).
+    DATA(lo_received_item) = receiver_request_x_times( 2 ).
+
+    cl_abap_unit_assert=>assert_equals(
+        exp = 2
+        act = CAST lcl_item( lo_received_item )->get_id( ) ).
+  ENDMETHOD.
+
+  METHOD fill_sender_queue_at_full_msgs.
+    send_request_x_times( 3 ).
+    DATA(lt_sender_queue) = mo_cut->get_sender_queue( ).
+    cl_abap_unit_assert=>assert_equals(
+        exp = 1
+        act = lines( lt_sender_queue ) ).
+  ENDMETHOD.
+
+  METHOD fill_recvr_queue_at_empty_msgs.
+    DATA(lo_item) = mo_cut->get_item_from_queue( ).
+    DATA(lt_receiver) = mo_cut->get_receiver_queue( ).
+    cl_abap_unit_assert=>assert_equals(
+        exp = 1
+        act = lines( lt_receiver ) ).
   ENDMETHOD.
 
 ENDCLASS.
 
 
 START-OF-SELECTION.
-
-  NEW lcl_application( ).
+  CALL SCREEN 1000.
   INCLUDE ymbh_bounded_queue_top.
   INCLUDE ymbh_bounded_queue_status_1o01.
   INCLUDE ymbh_bounded_queue_user_comi01.
