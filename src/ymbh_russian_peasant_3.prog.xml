@@ -12,12 +12,6 @@
    </PROGDIR>
    <TPOOL>
     <item>
-     <ID>I</ID>
-     <KEY>001</KEY>
-     <ENTRY>Enter Operands:</ENTRY>
-     <LENGTH>25</LENGTH>
-    </item>
-    <item>
      <ID>R</ID>
      <ENTRY>Russian peasant multiplication 2</ENTRY>
      <LENGTH>32</LENGTH>

@@ -16,12 +16,6 @@
      <ENTRY>Code Kata - Odd Even Prime</ENTRY>
      <LENGTH>26</LENGTH>
     </item>
-    <item>
-     <ID>S</ID>
-     <KEY>S_RANGE</KEY>
-     <ENTRY>Number range</ENTRY>
-     <LENGTH>20</LENGTH>
-    </item>
    </TPOOL>
   </asx:values>
  </asx:abap>

@@ -63,8 +63,8 @@ CLASS ltc_fire_alarm IMPLEMENTATION.
     DATA lo_kata_constraint TYPE REF TO lcl_kata_constraint.
     DATA(lo_cut) = NEW lcl_fire_alarm( ).
     lo_kata_constraint = NEW #( ).
-    lo_cut->raise_fire_alarm( ).
     SET HANDLER lo_kata_constraint->handle_fire_alarm FOR lo_cut.
+    lo_cut->raise_fire_alarm( ).
 
     cl_abap_unit_assert=>assert_that(
       EXPORTING

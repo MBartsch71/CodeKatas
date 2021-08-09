@@ -16,18 +16,6 @@
      <ENTRY>Code Kata Russian Peasant Algorhythm</ENTRY>
      <LENGTH>36</LENGTH>
     </item>
-    <item>
-     <ID>S</ID>
-     <KEY>P_NUM1</KEY>
-     <ENTRY>Zahl 1</ENTRY>
-     <LENGTH>14</LENGTH>
-    </item>
-    <item>
-     <ID>S</ID>
-     <KEY>P_NUM2</KEY>
-     <ENTRY>Zahl 2</ENTRY>
-     <LENGTH>14</LENGTH>
-    </item>
    </TPOOL>
   </asx:values>
  </asx:abap>
