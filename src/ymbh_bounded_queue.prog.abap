@@ -1,6 +1,5 @@
 REPORT ymbh_bounded_queue.
 
-
 CLASS lcx_queue DEFINITION INHERITING FROM cx_no_check.
 ENDCLASS.
 
@@ -92,7 +91,12 @@ CLASS lcl_queue IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD enqueue.
-    APPEND io_item TO mt_queue.
+    IF io_item IS BOUND.
+      APPEND io_item TO mt_queue.
+    ELSE.
+      DATA(lo_dummy) = NEW lcl_item( 0 ).
+      APPEND lo_dummy TO mt_queue.
+    ENDIF.
   ENDMETHOD.
 
   METHOD dequeue.
@@ -101,7 +105,11 @@ CLASS lcl_queue IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD read_first_item.
-    ro_item = mt_queue[ 1 ].
+    TRY.
+        ro_item = mt_queue[ 1 ].
+      CATCH cx_sy_itab_line_not_found.
+        RAISE EXCEPTION TYPE lcx_queue.
+    ENDTRY.
   ENDMETHOD.
 
   METHOD remove_first_item.
@@ -197,6 +205,8 @@ CLASS lcl_application DEFINITION FINAL.
     DATA mo_message_queue  TYPE REF TO lcl_queue.
     DATA mo_sender_queue   TYPE REF TO lcl_queue.
     DATA mo_receiver_queue TYPE REF TO lcl_queue.
+    METHODS process_bocked_sender.
+    METHODS process_blocked_receiver.
 
 ENDCLASS.
 
@@ -212,6 +222,7 @@ CLASS lcl_application IMPLEMENTATION.
     TRY.
         mo_message_queue->enqueue( io_item ).
         rv_result = abap_true.
+        process_blocked_receiver( ).
       CATCH lcx_queue.
         mo_sender_queue->enqueue( io_item ).
     ENDTRY.
@@ -220,6 +231,7 @@ CLASS lcl_application IMPLEMENTATION.
   METHOD get_item_from_queue.
     TRY.
         ro_item = mo_message_queue->dequeue( ).
+        process_bocked_sender( ).
       CATCH lcx_queue.
         mo_receiver_queue->enqueue( ro_item ).
     ENDTRY.
@@ -235,6 +247,23 @@ CLASS lcl_application IMPLEMENTATION.
 
   METHOD get_message_queue.
     rt_queue = mo_message_queue->get( ).
+  ENDMETHOD.
+
+
+  METHOD process_bocked_sender.
+    TRY.
+        DATA(lo_item) = mo_sender_queue->dequeue( ).
+        mo_message_queue->enqueue( lo_item ).
+      CATCH lcx_queue.
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD process_blocked_receiver.
+    TRY.
+        DATA(lo_item) = mo_receiver_queue->dequeue( ).
+        lo_item = mo_message_queue->dequeue( ).
+      CATCH lcx_queue.
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.

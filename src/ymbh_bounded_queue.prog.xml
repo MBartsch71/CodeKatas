@@ -61,11 +61,11 @@
        <CONT_NAME>SCREEN</CONT_NAME>
        <TYPE>TEXT</TYPE>
        <NAME>LBL_SENDERS</NAME>
-       <TEXT>Blocked_Senders</TEXT>
+       <TEXT>Writing_Thread</TEXT>
        <LINE>001</LINE>
        <COLUMN>001</COLUMN>
-       <LENGTH>015</LENGTH>
-       <VISLENGTH>015</VISLENGTH>
+       <LENGTH>014</LENGTH>
+       <VISLENGTH>014</VISLENGTH>
        <HEIGHT>001</HEIGHT>
        <FORMAT>CHAR</FORMAT>
        <REQU_ENTRY>N</REQU_ENTRY>
@@ -75,11 +75,11 @@
        <CONT_NAME>SCREEN</CONT_NAME>
        <TYPE>TEXT</TYPE>
        <NAME>LBL_MESSAGES</NAME>
-       <TEXT>Messages</TEXT>
+       <TEXT>Queue</TEXT>
        <LINE>001</LINE>
        <COLUMN>031</COLUMN>
-       <LENGTH>008</LENGTH>
-       <VISLENGTH>008</VISLENGTH>
+       <LENGTH>005</LENGTH>
+       <VISLENGTH>005</VISLENGTH>
        <HEIGHT>001</HEIGHT>
        <FORMAT>CHAR</FORMAT>
        <REQU_ENTRY>N</REQU_ENTRY>
@@ -89,11 +89,11 @@
        <CONT_NAME>SCREEN</CONT_NAME>
        <TYPE>TEXT</TYPE>
        <NAME>LBL_RECEIVERS</NAME>
-       <TEXT>Blocked_Receivers</TEXT>
+       <TEXT>Reading_Thread</TEXT>
        <LINE>001</LINE>
        <COLUMN>092</COLUMN>
-       <LENGTH>017</LENGTH>
-       <VISLENGTH>017</VISLENGTH>
+       <LENGTH>014</LENGTH>
+       <VISLENGTH>014</VISLENGTH>
        <HEIGHT>001</HEIGHT>
        <FORMAT>CHAR</FORMAT>
        <REQU_ENTRY>N</REQU_ENTRY>
