@@ -17,6 +17,7 @@ CLASS lcl_line DEFINITION.
 
   PRIVATE SECTION.
     CONSTANTS mc_line_unlimited TYPE i VALUE 0.
+    CONSTANTS mc_space_length   TYPE i VALUE 1.
 
     DATA mv_line       TYPE string.
     DATA mv_line_limit TYPE i.
@@ -56,7 +57,7 @@ CLASS lcl_line IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD insufficient_space_in_line.
-    rv_result = xsdbool( strlen( mv_line ) + 1 + strlen( iv_word ) > mv_line_limit AND
+    rv_result = xsdbool( strlen( mv_line ) + mc_space_length + strlen( iv_word ) > mv_line_limit AND
                          mv_line_limit <> mc_line_unlimited ).
   ENDMETHOD.
 
@@ -96,11 +97,11 @@ CLASS lcl_wrapper DEFINITION FINAL.
                          RETURNING VALUE(rv_wrapped_text) TYPE stringtab.
 
   PRIVATE SECTION.
+    DATA mo_line         TYPE REF TO lif_line.
     DATA mo_line_factory TYPE REF TO lcl_line_factory.
-    DATA mo_line TYPE REF TO lif_line.
 
-    DATA mv_input_text   TYPE string.
     DATA mt_wrapped_text TYPE stringtab.
+    DATA mv_input_text   TYPE string.
 
     METHODS store_text                   IMPORTING iv_text TYPE string.
 
@@ -129,7 +130,6 @@ CLASS lcl_wrapper IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD wrap_text.
-
     mo_line = mo_line_factory->get_new_line( ).
 
     WHILE text_has_not_ended( ).
@@ -176,22 +176,18 @@ CLASS ltc_wrapper DEFINITION FINAL FOR TESTING
   PRIVATE SECTION.
     DATA mo_cut TYPE REF TO lcl_wrapper.
 
-    METHODS setup.
-
     METHODS deliver_wrapped_text FOR TESTING.
 ENDCLASS.
 
 
 CLASS ltc_wrapper IMPLEMENTATION.
 
-  METHOD setup.
-    mo_cut = NEW #( 25 ).
-  ENDMETHOD.
-
   METHOD deliver_wrapped_text.
+    mo_cut = NEW #( 25 ).
     DATA(lv_input_text) = |Hansel and Gretel are young children whose father is a woodcutter. | &&
                           |When a great famine settles over the land, the woodcutter's abusive | &&
                           |second wife decides to take the children into the woods...|.
+
     DATA(lt_wrapped_text) = VALUE stringtab( ( |Hansel and Gretel are|    )
                                              ( |young children whose|     )
                                              ( |father is a woodcutter.|  )
@@ -222,17 +218,20 @@ CLASS ltc_line DEFINITION FINAL FOR TESTING
 
 ENDCLASS.
 
-
 CLASS ltc_line IMPLEMENTATION.
 
   METHOD add_words_to_limited_line.
     mo_cut = NEW #( 25 ).
-    mo_cut->lif_line~add_word( |Hello| ).
-    mo_cut->lif_line~add_word( |World!| ).
-    cl_abap_unit_assert=>assert_equals(
-        msg = |The resulting line should look like expected.|
-        exp = |Hello World!|
-        act = mo_cut->lif_line~get( ) ).
+    TRY.
+        mo_cut->lif_line~add_word( |Hello| ).
+        mo_cut->lif_line~add_word( |World!| ).
+        cl_abap_unit_assert=>assert_equals(
+            msg = |The resulting line should look like expected.|
+            exp = |Hello World!|
+            act = mo_cut->lif_line~get( ) ).
+      CATCH lcx_line_limit_overflow.
+        cl_abap_unit_assert=>fail( msg = |An exception shouldn't be raised.| ).
+    ENDTRY.
   ENDMETHOD.
 
   METHOD error_at_line_limit_overflow.
@@ -245,16 +244,19 @@ CLASS ltc_line IMPLEMENTATION.
             msg = |An exception should be raised|
             act = lx_error ).
     ENDTRY.
-
   ENDMETHOD.
 
   METHOD add_word_at_unlimited_line.
     mo_cut = NEW #( ).
-    mo_cut->lif_line~add_word( |Hello| ).
-    cl_abap_unit_assert=>assert_equals(
-        msg = |The resulting line should be like expected.|
-        exp = |Hello|
-        act = mo_cut->lif_line~get( ) ).
+    TRY.
+        mo_cut->lif_line~add_word( |Hello| ).
+        cl_abap_unit_assert=>assert_equals(
+            msg = |The resulting line should be like expected.|
+            exp = |Hello|
+            act = mo_cut->lif_line~get( ) ).
+      CATCH lcx_line_limit_overflow.
+        cl_abap_unit_assert=>fail( msg = |An exception shouldn't be raised.| ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -269,18 +271,21 @@ CLASS ltc_line_factory DEFINITION FINAL FOR TESTING
     METHODS get_limited_line_from_factory FOR TESTING.
 ENDCLASS.
 
-
 CLASS ltc_line_factory IMPLEMENTATION.
 
   METHOD get_limited_line_from_factory.
     mo_cut = NEW #( 25 ).
     DATA(lo_line) = mo_cut->get_new_line( ).
-    lo_line->add_word( |Hello| ).
-    lo_line->add_word( |World!| ).
-    cl_abap_unit_assert=>assert_equals(
-        msg = |The reulting line should look like expected.|
-        exp = |Hello World!|
-        act = lo_line->get( ) ).
+    TRY.
+        lo_line->add_word( |Hello| ).
+        lo_line->add_word( |World!| ).
+        cl_abap_unit_assert=>assert_equals(
+            msg = |The reulting line should look like expected.|
+            exp = |Hello World!|
+            act = lo_line->get( ) ).
+      CATCH lcx_line_limit_overflow.
+        cl_abap_unit_assert=>fail( msg = |An exception shouldn't be raised.| ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
