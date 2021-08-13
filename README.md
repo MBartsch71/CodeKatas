@@ -19,3 +19,6 @@ This is a collection of Code Katas realized in ABAP.
 
 - Sudoku
   - Program name: [YMBH_SUDOKU](src/ymbh_sudoku.prog.abap)
+
+- Word Wrap
+  - Program name: [YMBH_WORD_WRAP](src/ymbh_word_wrap.prog.abap)
