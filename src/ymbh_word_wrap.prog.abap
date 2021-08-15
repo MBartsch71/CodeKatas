@@ -72,6 +72,7 @@ CLASS lcl_line_factory DEFINITION.
 
   PRIVATE SECTION.
     DATA mv_line_limit TYPE i.
+
 ENDCLASS.
 
 CLASS lcl_line_factory IMPLEMENTATION.
@@ -97,7 +98,7 @@ CLASS lcl_wrapper DEFINITION FINAL.
                          RETURNING VALUE(rv_wrapped_text) TYPE stringtab.
 
   PRIVATE SECTION.
-    DATA mo_line         TYPE REF TO lif_line.
+    DATA mo_wrapped_line         TYPE REF TO lif_line.
     DATA mo_line_factory TYPE REF TO lcl_line_factory.
 
     DATA mt_wrapped_text TYPE stringtab.
@@ -113,7 +114,9 @@ CLASS lcl_wrapper DEFINITION FINAL.
 
     METHODS extract_first_word_from_text RETURNING VALUE(rv_word) TYPE string.
 
-    METHODS store_line                   IMPORTING iv_line TYPE string.
+    METHODS open_new_line_with_word      IMPORTING iv_word TYPE string.
+
+    METHODS store_wrapped_line                   IMPORTING iv_line TYPE string.
 
 ENDCLASS.
 
@@ -130,20 +133,24 @@ CLASS lcl_wrapper IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD wrap_text.
-    mo_line = mo_line_factory->get_new_line( ).
+    mo_wrapped_line = mo_line_factory->get_new_line( ).
 
     WHILE text_has_not_ended( ).
       DATA(lv_word) = extract_first_word_from_text( ).
       TRY.
-          mo_line->add_word( lv_word ).
+          mo_wrapped_line->add_word( lv_word ).
         CATCH lcx_line_limit_overflow.
-          store_line( mo_line->get( ) ).
-          mo_line = mo_line_factory->get_new_line( ).
-          mo_line->add_word( lv_word ).
+          store_wrapped_line( mo_wrapped_line->get( ) ).
+          open_new_line_with_word( lv_word ).
       ENDTRY.
     ENDWHILE.
 
-    store_line( mo_line->get( ) ).
+    store_wrapped_line( mo_wrapped_line->get( ) ).
+  ENDMETHOD.
+
+  METHOD open_new_line_with_word.
+    mo_wrapped_line = mo_line_factory->get_new_line( ).
+    mo_wrapped_line->add_word( iv_word ).
   ENDMETHOD.
 
   METHOD text_has_not_ended.
@@ -158,7 +165,7 @@ CLASS lcl_wrapper IMPLEMENTATION.
     mv_input_text = iv_text.
   ENDMETHOD.
 
-  METHOD store_line.
+  METHOD store_wrapped_line.
     mt_wrapped_text = VALUE #( BASE mt_wrapped_text ( iv_line ) ).
   ENDMETHOD.
 
@@ -169,7 +176,6 @@ CLASS lcl_wrapper IMPLEMENTATION.
 ENDCLASS.
 
 CLASS ltc_wrapper DEFINITION FINAL FOR TESTING
-
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
@@ -177,6 +183,7 @@ CLASS ltc_wrapper DEFINITION FINAL FOR TESTING
     DATA mo_cut TYPE REF TO lcl_wrapper.
 
     METHODS deliver_wrapped_text FOR TESTING.
+
 ENDCLASS.
 
 
@@ -280,7 +287,7 @@ CLASS ltc_line_factory IMPLEMENTATION.
         lo_line->add_word( |Hello| ).
         lo_line->add_word( |World!| ).
         cl_abap_unit_assert=>assert_equals(
-            msg = |The reulting line should look like expected.|
+            msg = |The resulting line should look like expected.|
             exp = |Hello World!|
             act = lo_line->get( ) ).
       CATCH lcx_line_limit_overflow.
