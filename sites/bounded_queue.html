@@ -1,0 +1,67 @@
+<html>
+<style>
+    .Container {
+        columns: 3;
+        column-gap: 2px;
+        height: 300px;
+    }
+
+    .Column {
+        border: 1px solid gray;
+        text-align: center;
+        height: 99%;
+        padding: 0px;
+        margin: 0px;
+    }
+
+    #Inbox {
+        background-color: green;
+        opacity: 50%;
+        overflow: scroll;
+    }
+
+    #Queue {
+        background-color: wheat;
+        color: black;
+        opacity: 50%;
+    }
+
+    #Dequeue {
+        background-color: yellow;
+        color: black;
+        opacity: 50%;
+    }
+
+    ul {
+        list-style: none;
+    }
+
+    li {
+        text-align: left;
+    }
+
+    h4 {
+        margin-top: 2px;
+    }
+</style>
+
+<head>
+    <title>Bounded Queue</title>
+</head>
+
+<body>
+    <div class="Container">
+        <div id="Inbox" class="Column">
+            <h4>Enqueue</h4>
+            <ul>
+                <li></li>
+            </ul>
+
+
+        </div>
+        <div id="Queue" class="Column"><h4>Queue messages</h4></div>
+        <div id="Dequeue" class="Column"><h4>Dequeue</h4></div>
+    </div>
+</body>
+
+</html>
