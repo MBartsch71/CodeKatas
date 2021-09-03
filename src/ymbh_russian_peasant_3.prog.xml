@@ -3,7 +3,7 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <PROGDIR>
-    <NAME>YMBH_ODD_EVEN_PRIME</NAME>
+    <NAME>YMBH_RUSSIAN_PEASANT_3</NAME>
     <DBAPL>S</DBAPL>
     <SUBC>1</SUBC>
     <FIXPT>X</FIXPT>
@@ -13,8 +13,8 @@
    <TPOOL>
     <item>
      <ID>R</ID>
-     <ENTRY>Code Kata - Odd Even Prime</ENTRY>
-     <LENGTH>26</LENGTH>
+     <ENTRY>Russian peasant multiplication 2</ENTRY>
+     <LENGTH>32</LENGTH>
     </item>
    </TPOOL>
   </asx:values>

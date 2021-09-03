@@ -3,7 +3,7 @@
  <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
   <asx:values>
    <PROGDIR>
-    <NAME>YMBH_ODD_EVEN_PRIME</NAME>
+    <NAME>YMBH_SUDOKU</NAME>
     <DBAPL>S</DBAPL>
     <SUBC>1</SUBC>
     <FIXPT>X</FIXPT>
@@ -13,8 +13,8 @@
    <TPOOL>
     <item>
      <ID>R</ID>
-     <ENTRY>Code Kata - Odd Even Prime</ENTRY>
-     <LENGTH>26</LENGTH>
+     <ENTRY>Sudoku in ABAP</ENTRY>
+     <LENGTH>14</LENGTH>
     </item>
    </TPOOL>
   </asx:values>
