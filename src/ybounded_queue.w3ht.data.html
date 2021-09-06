@@ -3,7 +3,7 @@
     .Container {
         columns: 3;
         column-gap: 2px;
-        height: 100px;
+        height: 300px;
     }
 
     .Column {
@@ -39,6 +39,10 @@
     li {
         text-align: left;
     }
+
+    h4 {
+        margin-top: 2px;
+    }
 </style>
 
 <head>
@@ -48,19 +52,15 @@
 <body>
     <div class="Container">
         <div id="Inbox" class="Column">
+            <h4>Enqueue</h4>
             <ul>
-                <li>1</li>
-                <li>2</li>
-                <li>3</li>
-                <li>4</li>
-                <li>5</li>
-                <li>6</li>
+                <li></li>
             </ul>
 
 
         </div>
-        <div id="Queue" class="Column">Queue messages</div>
-        <div id="Dequeue" class="Column">Dequeue</div>
+        <div id="Queue" class="Column"><h4>Queue messages</h4></div>
+        <div id="Dequeue" class="Column"><h4>Dequeue</h4></div>
     </div>
 </body>
 
