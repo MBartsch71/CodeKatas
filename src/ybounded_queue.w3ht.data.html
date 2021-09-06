@@ -7,7 +7,7 @@
     }
 
     .Column {
-        border: 1px solid gray;
+        border: 1px solid darkgray;
         text-align: center;
         height: 99%;
         padding: 0px;
@@ -15,21 +15,18 @@
     }
 
     #Inbox {
-        background-color: green;
-        opacity: 50%;
+        background-color: rgb(7, 151, 7);
         overflow: scroll;
     }
 
     #Queue {
-        background-color: wheat;
+        background-color: rgb(248, 224, 178);
         color: black;
-        opacity: 50%;
     }
 
     #Dequeue {
-        background-color: yellow;
+        background-color: rgb(238, 238, 6);
         color: black;
-        opacity: 50%;
     }
 
     ul {
@@ -51,16 +48,18 @@
 
 <body>
     <div class="Container">
-        <div id="Inbox" class="Column">
-            <h4>Enqueue</h4>
-            <ul>
-                <li></li>
-            </ul>
-
-
+        <div id="Enqueue" class="Column">
+            <h4>Writing thread</h4>
+            <ul>!ENQUEUE_LIST!</ul>
         </div>
-        <div id="Queue" class="Column"><h4>Queue messages</h4></div>
-        <div id="Dequeue" class="Column"><h4>Dequeue</h4></div>
+        <div id="Queue" class="Column">
+            <h4>Queue messages</h4>
+            <ul>!QUEUE_LIST!</ul>
+        </div>
+        <div id="Dequeue" class="Column">
+            <h4>Reading thread</h4>
+            <ul>!DEQUEUE_LIST!</ul>
+        </div>
     </div>
 </body>
 
