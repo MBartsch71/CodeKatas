@@ -16,20 +16,17 @@
 
     #Inbox {
         background-color: green;
-        opacity: 50%;
         overflow: scroll;
     }
 
     #Queue {
         background-color: wheat;
         color: black;
-        opacity: 50%;
     }
 
     #Dequeue {
         background-color: yellow;
         color: black;
-        opacity: 50%;
     }
 
     ul {
@@ -51,16 +48,18 @@
 
 <body>
     <div class="Container">
-        <div id="Inbox" class="Column">
+        <div id="Enqueue" class="Column">
             <h4>Enqueue</h4>
-            <ul>
-                <li></li>
-            </ul>
-
-
+            !ENQUEUE_LIST!
         </div>
-        <div id="Queue" class="Column"><h4>Queue messages</h4></div>
-        <div id="Dequeue" class="Column"><h4>Dequeue</h4></div>
+        <div id="Queue" class="Column">
+            <h4>Queue messages</h4>
+            !QUEUE_LIST!
+        </div>
+        <div id="Dequeue" class="Column">
+            <h4>Dequeue</h4>
+            !DEQUEUE_LIST!
+        </div>
     </div>
 </body>
 
