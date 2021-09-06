@@ -39,6 +39,18 @@ CLASS lcl_application IMPLEMENTATION.
     DATA lt_merge_table TYPE swww_t_merge_table.
     DATA lv_url TYPE swk_url.
 
+    lt_merge_table = VALUE #( ( name    = |!ENQUEUE_LIST!|
+                                command = |R|
+                                html    = VALUE #( ( |<li>Enqueue list item 1</li>|  ) ) )
+
+                              ( name    = |!QUEUE_LIST!|
+                                command = |R|
+                                html    = VALUE #( ( |<li>Queue list item 1</li>| ) ) )
+
+                              ( name    = |!DEQUEUE_LIST!|
+                                command = |R|
+                                html    = VALUE #( ( |<li>Dequeue list item 1</li>| ) ) ) ).
+
     DATA(lt_html_table) = NEW lcl_html_merger_dao( )->lif_html_merger_dao~merge_html_site( lt_merge_table ).
     DATA(lo_html_viewer) = NEW cl_gui_html_viewer( parent = cl_gui_container=>screen0 ).
     lo_html_viewer->load_data(
