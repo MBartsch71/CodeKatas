@@ -1,74 +1,153 @@
 REPORT ymbh_bounded_queue.
 
-INTERFACE lif_html_merger_dao.
-  METHODS merge_html_site IMPORTING it_merge_table       TYPE swww_t_merge_table
-                          RETURNING VALUE(rt_html_table) TYPE swww_t_html_table.
+CLASS lcx_queue DEFINITION INHERITING FROM cx_no_check.
+ENDCLASS.
 
-ENDINTERFACE.
+CLASS lcl_queue DEFINITION FINAL.
 
-CLASS lcl_html_merger_dao DEFINITION.
   PUBLIC SECTION.
-    INTERFACES lif_html_merger_dao.
+    METHODS constructor IMPORTING size TYPE i.
+
+    METHODS append      IMPORTING object        TYPE REF TO object
+                        RETURNING VALUE(result) TYPE abap_bool.
+
+    METHODS pop RETURNING VALUE(result) TYPE REF TO object.
+
   PRIVATE SECTION.
-    DATA: mc_html_template_name TYPE swww_t_template_name VALUE 'YBOUNDED_QUEUE'.
+    DATA size  TYPE i.
+    DATA queue TYPE TABLE OF REF TO object.
+
+    METHODS object_appended                IMPORTING object        TYPE REF TO object
+                                           RETURNING VALUE(result) TYPE abap_bool.
+
+    METHODS append_object_to_queue         IMPORTING object TYPE REF TO object.
+    METHODS pop_object_from_queue          RETURNING VALUE(result) TYPE REF TO object.
+    METHODS get_first_object_from_queue    RETURNING VALUE(result) TYPE REF TO object.
+    METHODS delete_first_object_from_queue.
+
+    METHODS abort_at_full_queue.
+    METHODS abort_at_empty_queue.
+
+
 ENDCLASS.
 
-CLASS lcl_html_merger_dao IMPLEMENTATION.
+CLASS lcl_queue IMPLEMENTATION.
 
-  METHOD lif_html_merger_dao~merge_html_site.
-    DATA(lt_merge_table) = it_merge_table.
-    CALL FUNCTION 'WWW_HTML_MERGER'
-      EXPORTING
-        template    = mc_html_template_name
-      IMPORTING
-        html_table  = rt_html_table
-      CHANGING
-        merge_table = lt_merge_table.
+  METHOD constructor.
+    me->size = size.
+  ENDMETHOD.
+
+  METHOD append.
+    result = object_appended( object ).
+  ENDMETHOD.
+
+  METHOD pop.
+    result = pop_object_from_queue( ).
+  ENDMETHOD.
+
+  METHOD object_appended.
+    abort_at_full_queue( ).
+    append_object_to_queue( object ).
+    result = abap_true.
+  ENDMETHOD.
+
+  METHOD append_object_to_queue.
+    APPEND object TO queue.
+  ENDMETHOD.
+
+  METHOD abort_at_full_queue.
+    IF lines( queue ) = size.
+      RAISE EXCEPTION TYPE lcx_queue.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD pop_object_from_queue.
+    abort_at_empty_queue( ).
+    get_first_object_from_queue( ).
+    delete_first_object_from_queue( ).
+  ENDMETHOD.
+
+  METHOD abort_at_empty_queue.
+    IF lines( queue ) = 0.
+      RAISE EXCEPTION TYPE lcx_queue.
+    ENDIF.
+  ENDMETHOD.
+
+  METHOD get_first_object_from_queue.
+    result = queue[ 1 ].
+  ENDMETHOD.
+
+  METHOD delete_first_object_from_queue.
+    DELETE queue INDEX 1.
   ENDMETHOD.
 
 ENDCLASS.
 
-CLASS lcl_application DEFINITION.
-  PUBLIC SECTION.
-    METHODS build_website.
+
+CLASS ltc_queue DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO lcl_queue.
+
+    METHODS setup.
+
+    METHODS queue_append_pop_2x_append_ok FOR TESTING.
+    METHODS queue_append_2x_pop_failure   FOR TESTING.
+    METHODS queue_3x_append_failure       FOR TESTING.
+    METHODS pop_on_empty_queue_failure    FOR TESTING.
+
 ENDCLASS.
 
-CLASS lcl_application IMPLEMENTATION.
 
-  METHOD build_website.
-    DATA lt_merge_table TYPE swww_t_merge_table.
-    DATA lv_url TYPE swk_url.
+CLASS ltc_queue IMPLEMENTATION.
 
-    lt_merge_table = VALUE #( ( name    = |!ENQUEUE_LIST!|
-                                command = |R|
-                                html    = VALUE #( ( |<li>Enqueue list item 1</li>|  ) ) )
+  METHOD setup.
+    cut = NEW #( 2 ).
+  ENDMETHOD.
 
-                              ( name    = |!QUEUE_LIST!|
-                                command = |R|
-                                html    = VALUE #( ( |<li>Queue list item 1</li>| ) ) )
+  METHOD queue_append_pop_2x_append_ok.
+    TRY.
+        cut->append( NEW lcl_queue( 1 ) ).
+        cut->pop( ).
+        cut->append( NEW lcl_queue( 1 ) ).
+        cut->append( NEW lcl_queue( 1 ) ).
+      CATCH lcx_queue.
+        cl_abap_unit_assert=>fail( msg = |An exception shouldn't be raised.| ).
+    ENDTRY.
+  ENDMETHOD.
 
-                              ( name    = |!DEQUEUE_LIST!|
-                                command = |R|
-                                html    = VALUE #( ( |<li>Dequeue list item 1</li>| ) ) ) ).
+  METHOD queue_append_2x_pop_failure.
+    TRY.
+        cut->append( NEW lcl_queue( 1 ) ).
+        cut->pop( ).
+        cut->pop( ).
+      CATCH lcx_queue INTO DATA(lx_error).
+    ENDTRY.
 
-    DATA(lt_html_table) = NEW lcl_html_merger_dao( )->lif_html_merger_dao~merge_html_site( lt_merge_table ).
-    DATA(lo_html_viewer) = NEW cl_gui_html_viewer( parent = cl_gui_container=>screen0 ).
-    lo_html_viewer->load_data(
-      IMPORTING
-        assigned_url           = lv_url
-      CHANGING
-        data_table             = lt_html_table ).
+    cl_abap_unit_assert=>assert_bound( act = lx_error ).
+  ENDMETHOD.
 
-    lo_html_viewer->show_url( EXPORTING url = lv_url ).
+  METHOD queue_3x_append_failure.
+    TRY.
+        DO 3 TIMES.
+          cut->append( NEW lcl_queue( 1 ) ).
+        ENDDO.
+      CATCH lcx_queue INTO DATA(lx_error).
+    ENDTRY.
 
+    cl_abap_unit_assert=>assert_bound(
+        act = lx_error ).
+  ENDMETHOD.
+
+  METHOD pop_on_empty_queue_failure.
+    TRY.
+        DATA(result) = cut->pop( ).
+      CATCH lcx_queue INTO DATA(lx_error).
+    ENDTRY.
+
+    cl_abap_unit_assert=>assert_bound( act = lx_error ).
   ENDMETHOD.
 
 ENDCLASS.
-
-SELECTION-SCREEN BEGIN OF SCREEN 1001.
-SELECTION-SCREEN END OF SCREEN 1001.
-
-START-OF-SELECTION.
-
-  NEW lcl_application( )->build_website( ).
-  CALL SCREEN 1001.
