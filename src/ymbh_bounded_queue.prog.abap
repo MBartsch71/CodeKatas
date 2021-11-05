@@ -23,13 +23,11 @@ CLASS lcl_queue DEFINITION.
 
   PROTECTED SECTION.
     DATA queue TYPE STANDARD TABLE OF REF TO object.
+
     METHODS element_is_appended           IMPORTING element       TYPE REF TO object
                                           RETURNING VALUE(result) TYPE abap_bool.
 
   PRIVATE SECTION.
-
-
-
     METHODS abort_at_empty_queue.
     METHODS get_first_element_from_queue  RETURNING VALUE(result) TYPE REF TO object.
     METHODS delete_1st_element_from_queue.
@@ -115,7 +113,6 @@ CLASS lcl_bounded_queue IMPLEMENTATION.
 
 ENDCLASS.
 
-
 CLASS ltc_simple_queue IMPLEMENTATION.
 
   METHOD setup.
@@ -154,7 +151,6 @@ CLASS ltc_bounded_queue DEFINITION FINAL FOR TESTING
     METHODS error_at_appending_3_elements FOR TESTING.
     METHODS error_at_empty_queue          FOR TESTING.
 ENDCLASS.
-
 
 CLASS ltc_bounded_queue IMPLEMENTATION.
 
