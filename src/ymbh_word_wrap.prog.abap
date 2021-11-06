@@ -175,6 +175,23 @@ CLASS lcl_wrapper IMPLEMENTATION.
 
 ENDCLASS.
 
+
+class application definition.
+
+  public section.
+    methods run.
+
+endclass.
+
+class application implementation.
+
+  method run.
+
+  endmethod.
+
+endclass.
+
+
 CLASS ltc_wrapper DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
@@ -296,3 +313,5 @@ CLASS ltc_line_factory IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+START-OF-SELECTION.
