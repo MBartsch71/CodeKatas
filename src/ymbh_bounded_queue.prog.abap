@@ -113,6 +113,24 @@ CLASS lcl_bounded_queue IMPLEMENTATION.
 
 ENDCLASS.
 
+CLASS lcl_queue_factory DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    CLASS-METHODS get_instance IMPORTING size            TYPE i OPTIONAL
+                               RETURNING VALUE(r_result) TYPE REF TO lif_queue.
+
+
+ENDCLASS.
+
+CLASS lcl_queue_factory IMPLEMENTATION.
+
+  METHOD get_instance.
+    r_result = COND #( WHEN size IS INITIAL THEN NEW lcl_queue( )
+                       ELSE NEW lcl_bounded_queue( size ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
 CLASS ltc_simple_queue IMPLEMENTATION.
 
   METHOD setup.
@@ -160,7 +178,7 @@ CLASS ltc_bounded_queue IMPLEMENTATION.
 
   METHOD add_object_to_bounded_queue.
     cl_abap_unit_assert=>assert_true(
-        act =  cut->lif_queue~append( NEW lcl_queue( )  ) ).
+        act =  cut->lif_queue~append( NEW lcl_queue( ) ) ).
   ENDMETHOD.
 
   METHOD error_at_appending_3_elements.
@@ -181,6 +199,33 @@ CLASS ltc_bounded_queue IMPLEMENTATION.
     ENDTRY.
 
     cl_abap_unit_assert=>assert_bound( act = lx_error ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS ltc_class_factory DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO lcl_queue_factory.
+    METHODS build_unlimited_queue FOR TESTING.
+    METHODS build_bounded_queue   FOR TESTING.
+
+ENDCLASS.
+
+
+CLASS ltc_class_factory IMPLEMENTATION.
+  METHOD build_unlimited_queue.
+    DATA(queue) = lcl_queue_factory=>get_instance( ).
+    cl_abap_unit_assert=>assert_bound(
+        act = queue ).
+  ENDMETHOD.
+
+  METHOD build_bounded_queue.
+    DATA(queue) = lcl_queue_factory=>get_instance( 2 ).
+    cl_abap_unit_assert=>assert_bound(
+        act = queue ).
   ENDMETHOD.
 
 ENDCLASS.
