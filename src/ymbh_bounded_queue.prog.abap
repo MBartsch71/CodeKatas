@@ -67,19 +67,6 @@ CLASS lcl_queue IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS ltc_simple_queue DEFINITION FINAL FOR TESTING
-  DURATION SHORT
-  RISK LEVEL HARMLESS.
-
-  PRIVATE SECTION.
-    DATA cut TYPE REF TO lcl_queue.
-
-    METHODS setup.
-    METHODS add_object_to_queue          FOR TESTING.
-    METHODS pop_object_from_queue        FOR TESTING.
-    METHODS exception_pop_at_empty_queue FOR TESTING.
-ENDCLASS.
-
 CLASS lcl_bounded_queue DEFINITION INHERITING FROM lcl_queue.
 
   PUBLIC SECTION.
@@ -119,7 +106,6 @@ CLASS lcl_queue_factory DEFINITION FINAL.
     CLASS-METHODS get_instance IMPORTING size            TYPE i OPTIONAL
                                RETURNING VALUE(r_result) TYPE REF TO lif_queue.
 
-
 ENDCLASS.
 
 CLASS lcl_queue_factory IMPLEMENTATION.
@@ -128,6 +114,20 @@ CLASS lcl_queue_factory IMPLEMENTATION.
     r_result = COND #( WHEN size IS INITIAL THEN NEW lcl_queue( )
                        ELSE NEW lcl_bounded_queue( size ) ).
   ENDMETHOD.
+
+ENDCLASS.
+
+CLASS ltc_simple_queue DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO lcl_queue.
+
+    METHODS setup.
+    METHODS add_object_to_queue          FOR TESTING.
+    METHODS pop_object_from_queue        FOR TESTING.
+    METHODS exception_pop_at_empty_queue FOR TESTING.
 
 ENDCLASS.
 
@@ -168,6 +168,7 @@ CLASS ltc_bounded_queue DEFINITION FINAL FOR TESTING
     METHODS add_object_to_bounded_queue   FOR TESTING.
     METHODS error_at_appending_3_elements FOR TESTING.
     METHODS error_at_empty_queue          FOR TESTING.
+
 ENDCLASS.
 
 CLASS ltc_bounded_queue IMPLEMENTATION.
@@ -214,8 +215,8 @@ CLASS ltc_class_factory DEFINITION FINAL FOR TESTING
 
 ENDCLASS.
 
-
 CLASS ltc_class_factory IMPLEMENTATION.
+
   METHOD build_unlimited_queue.
     DATA(queue) = lcl_queue_factory=>get_instance( ).
     cl_abap_unit_assert=>assert_bound(
