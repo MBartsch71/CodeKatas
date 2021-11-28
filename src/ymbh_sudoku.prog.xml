@@ -6,17 +6,11 @@
     <NAME>YMBH_SUDOKU</NAME>
     <DBAPL>S</DBAPL>
     <SUBC>1</SUBC>
+    <APPL>X</APPL>
     <FIXPT>X</FIXPT>
     <LDBNAME>D$S</LDBNAME>
     <UCCHECK>X</UCCHECK>
    </PROGDIR>
-   <TPOOL>
-    <item>
-     <ID>R</ID>
-     <ENTRY>Sudoku in ABAP</ENTRY>
-     <LENGTH>14</LENGTH>
-    </item>
-   </TPOOL>
   </asx:values>
  </asx:abap>
 </abapGit>

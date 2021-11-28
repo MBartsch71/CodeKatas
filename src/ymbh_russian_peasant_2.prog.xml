@@ -6,17 +6,11 @@
     <NAME>YMBH_RUSSIAN_PEASANT_2</NAME>
     <DBAPL>S</DBAPL>
     <SUBC>1</SUBC>
+    <APPL>X</APPL>
     <FIXPT>X</FIXPT>
     <LDBNAME>D$S</LDBNAME>
     <UCCHECK>X</UCCHECK>
    </PROGDIR>
-   <TPOOL>
-    <item>
-     <ID>R</ID>
-     <ENTRY>Russian peasant multiplication 2</ENTRY>
-     <LENGTH>32</LENGTH>
-    </item>
-   </TPOOL>
   </asx:values>
  </asx:abap>
 </abapGit>
