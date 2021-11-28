@@ -6,11 +6,17 @@
     <NAME>YMBH_FOR_LET_SAMPLE</NAME>
     <DBAPL>S</DBAPL>
     <SUBC>1</SUBC>
-    <APPL>X</APPL>
     <FIXPT>X</FIXPT>
     <LDBNAME>D$S</LDBNAME>
     <UCCHECK>X</UCCHECK>
    </PROGDIR>
+   <TPOOL>
+    <item>
+     <ID>R</ID>
+     <ENTRY>Sample program FOR Let expression</ENTRY>
+     <LENGTH>33</LENGTH>
+    </item>
+   </TPOOL>
   </asx:values>
  </asx:abap>
 </abapGit>
