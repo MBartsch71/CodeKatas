@@ -4,13 +4,17 @@
   <asx:values>
    <PROGDIR>
     <NAME>YMBH_BOUNDED_QUEUE_STATUS_1O01</NAME>
-    <DBAPL>S</DBAPL>
     <SUBC>I</SUBC>
-    <APPL>X</APPL>
-    <FIXPT>X</FIXPT>
-    <LDBNAME>D$S</LDBNAME>
+    <RLOAD>E</RLOAD>
     <UCCHECK>X</UCCHECK>
    </PROGDIR>
+   <TPOOL>
+    <item>
+     <ID>R</ID>
+     <ENTRY>Include YMBH_BOUNDED_QUEUE_STATUS_1O01</ENTRY>
+     <LENGTH>38</LENGTH>
+    </item>
+   </TPOOL>
   </asx:values>
  </asx:abap>
 </abapGit>
