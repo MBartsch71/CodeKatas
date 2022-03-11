@@ -15,7 +15,9 @@ This is a collection of Code Katas realized in ABAP.
   - Program name: [YMBH_ODD_EVEN_PRIME](src/ymbh_odd_even_prime.prog.abap)
 
 - Tic Tac Toe
-  - Program name: [YMBH_TIC_TAC_TOE_2](src/ymbh_tic_tac_toe_2.prog.abap)
+	- Program name: [YMBH_TIC_TAC_TOE_2](src/ymbh_tic_tac_toe_2.prog.abap)
+- Tic Tac Toe - **TDD as if you mean it**
+	- Program name: [YMBH_TIC_TAC_TOE_TDD_AIYMI_1](src/ymbh_tic_tac_toe_tdd_aiymi_1.prog.abap)
 
 - Sudoku
   - Program name: [YMBH_SUDOKU](src/ymbh_sudoku.prog.abap)
