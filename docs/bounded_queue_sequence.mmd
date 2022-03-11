@@ -1,0 +1,27 @@
+sequenceDiagram
+    participant G as GUI
+    participant Q as Queue
+    participant E as Enqueue
+    participant D as Dequeue
+    G->>Q: Start and wait for event
+    G->>E: New enqueue(1) 
+    E->>Q: Enqueue(1)
+    Q->>E: Enqueued(1)
+    Q->>G: Print enqueue(1)
+    G->>D: New dequeue(1)
+    D->>Q: Dequeue(1)
+    Q->>D: Dequeued(1)
+    Q->>G: Print dequeue(1)
+    G->>E: New enqueue(2)
+    E->>Q: Enqueue(2)
+    Q->>E: Enqueued(2)
+    E->>G: Enqueue(2)
+    G->>E: New enqueue(3)
+    E->>Q: Enqueue(3)
+    Q->>E: Enqueued(3)
+    E->>G: Enqueue(3)
+    G->>E: New enqueue(4)
+    E->>Q: Enqueue(4)
+    Q->>E: Blocked(4)
+    E->>G: Enqueue(4)//blocked
+    
