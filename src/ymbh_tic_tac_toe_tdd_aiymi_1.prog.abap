@@ -1,131 +1,75 @@
 ##ToDo
-" * get a value from a cell
-" * set a value to a cell and get it back
-" * build a cell object
-" * set value to the object
-" * retrieve the value
-" * check if it makes sense to build a x and an o object
-" - build more than one cell in a collection
-" - introduce some kind of coordinates
+"* get a value
+"* set a value and retrieve it
+"* building a stone object
+"* set the expected value to the object
+"* retrieve the expected value from the object
+"- building a O stone
+"- create designated objects for X and O
 
 REPORT ymbh_tic_tac_toe_tdd_aiymi_1.
 
-INTERFACE if_cell.
-  DATA value TYPE char1 READ-ONLY.
-  METHODS get_value RETURNING VALUE(result) TYPE char1.
-
-ENDINTERFACE.
-
-CLASS x_cell DEFINITION.
-  PUBLIC SECTION.
-    INTERFACES if_cell.
-
-ENDCLASS.
-
-CLASS x_cell IMPLEMENTATION.
-
-  METHOD if_cell~get_value.
-    RETURN.
-  ENDMETHOD.
-
-ENDCLASS.
-
-CLASS o_cell DEFINITION.
-  PUBLIC SECTION.
-    INTERFACES if_cell.
-
-ENDCLASS.
-
-CLASS o_cell IMPLEMENTATION.
-
-  METHOD if_cell~get_value.
-    RETURN.
-  ENDMETHOD.
-
-ENDCLASS.
-
-CLASS object_checker DEFINITION.
-  PUBLIC SECTION.
-    INTERFACES if_constraint.
-ENDCLASS.
-
-CLASS object_checker IMPLEMENTATION.
-
-  METHOD if_constraint~get_description.
-
-  ENDMETHOD.
-
-  METHOD if_constraint~is_valid.
-    IF data_object IS INSTANCE OF x_cell.
-      result = abap_true.
-    ELSEIF data_object IS INSTANCE OF o_cell.
-      result = abap_true.
-    ENDIF.
-  ENDMETHOD.
-
-ENDCLASS.
-
-CLASS cell_factory DEFINITION.
+CLASS stone DEFINITION.
 
   PUBLIC SECTION.
-    CLASS-METHODS get_instance IMPORTING value         TYPE string
-                               RETURNING VALUE(result) TYPE REF TO if_cell.
+    METHODS set_value IMPORTING value TYPE char1.
+    METHODS get_value RETURNING VALUE(result) TYPE char1.
+
+  PRIVATE SECTION.
+    DATA value TYPE c LENGTH 1.
 
 ENDCLASS.
 
-CLASS cell_factory IMPLEMENTATION.
+CLASS stone IMPLEMENTATION.
 
+  METHOD set_value.
+    me->value = value.
+  ENDMETHOD.
 
-
-  METHOD get_instance.
-    result = SWITCH #( value WHEN 'X' THEN NEW x_cell( )
-                             WHEN 'O' THEN NEW o_cell( ) ).
+  METHOD get_value.
+    result = value.
   ENDMETHOD.
 
 ENDCLASS.
 
-CLASS tc_tictactoe DEFINITION FINAL FOR TESTING
+CLASS tc_stone DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    DATA cell_value TYPE string.
+    DATA value TYPE c LENGTH 1.
+    DATA cut TYPE REF TO stone.
 
-
-    METHODS build_a_x_object FOR TESTING.
-    METHODS build_a_o_object FOR TESTING.
-
-    METHODS get_cell_value RETURNING VALUE(result) TYPE char1.
-    METHODS set_cell_value IMPORTING value TYPE string.
-
-
+    METHODS build_a_stone_object FOR TESTING.
+    METHODS set_value_to_stone_object FOR TESTING.
+    METHODS get_value_from_stone_object FOR TESTING.
 ENDCLASS.
 
 
-CLASS tc_tictactoe IMPLEMENTATION.
+CLASS tc_stone IMPLEMENTATION.
 
-  METHOD get_cell_value.
-    result = cell_value.
+  METHOD build_a_stone_object.
+    cut = NEW #( ).
+    cl_abap_unit_assert=>assert_bound(
+        msg = |The object should be bound!|
+        act = cut ).
   ENDMETHOD.
 
-  METHOD set_cell_value.
-    cell_value = value.
+  METHOD set_value_to_stone_object.
+    cut = NEW #( ).
+    cut->set_value( |X| ).
+    cl_abap_unit_assert=>assert_bound(
+        msg = |The object should be bound!|
+        act = cut ).
   ENDMETHOD.
 
-  METHOD build_a_x_object.
-    DATA(cell) = cell_factory=>get_instance( |X| ).
-    cl_abap_unit_assert=>assert_that(
-      EXPORTING
-        act              = cell
-        exp              = NEW object_checker( ) ).
+  METHOD get_value_from_stone_object.
+    cut = NEW #(  ).
+    cut->set_value( |O| ).
+    cl_abap_unit_assert=>assert_equals(
+        exp = |O|
+        act = cut->get_value( ) ).
   ENDMETHOD.
 
-  METHOD build_a_o_object.
-    DATA(cell) = cell_factory=>get_instance( |O| ).
-    cl_abap_unit_assert=>assert_that(
-   EXPORTING
-     act              = cell
-     exp              = NEW object_checker( ) ).
-  ENDMETHOD.
 
 ENDCLASS.
