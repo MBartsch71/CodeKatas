@@ -1,92 +1,139 @@
-"* build class for test
-"* store content in class
-"* get a word from the text
-"* shorten the text by one word
-"- get a line of definite length
-"- fill line with words till limit
-"- add line to a text table
-"- display the text
-"_ build surroundings
+##TODO
+"* create input text with 2 words
+"* store input text in object
+"* try different blank settings (1 in front, 1 in the end, multiple between words
+"- cut word from text
+"- create output text object
+"- build an output text line
+"- check the output limit
+"- display the whole output text
+"- visualize limit range in output
 REPORT ymbh_word_wrap_2.
 
-CLASS text DEFINITION.
+CLASS input_text DEFINITION FINAL.
 
   PUBLIC SECTION.
+    METHODS constructor       IMPORTING content TYPE string.
 
-    METHODS constructor IMPORTING text TYPE string.
-    METHODS get_content RETURNING VALUE(result) TYPE string.
-    METHODS get_word    RETURNING VALUE(result) TYPE string.
+    METHODS get_text          RETURNING VALUE(result) TYPE string.
+
+    METHODS get_text_wordwise RETURNING VALUE(result) TYPE stringtab.
+    METHODS extract_leading_word
+      RETURNING
+        VALUE(result) TYPE string.
 
   PRIVATE SECTION.
-    CONSTANTS c_regex_for_one_word TYPE string VALUE `(\w+\s){1}`.
     DATA content TYPE string.
+    DATA content_as_table TYPE stringtab.
 
-    METHODS cut_word_from_content.
-    METHODS get_length_of_leading_word RETURNING VALUE(result) TYPE i.
+    METHODS split_text_to_table.
 
 ENDCLASS.
 
-CLASS text IMPLEMENTATION.
+CLASS input_text IMPLEMENTATION.
 
   METHOD constructor.
-    content = text.
+    me->content = content.
+    split_text_to_table( ).
   ENDMETHOD.
 
-  METHOD get_content.
+  METHOD get_text.
     result = content.
   ENDMETHOD.
 
-  METHOD get_word.
-    DATA(length) = get_length_of_leading_word( ).
-    result = condense( substring( val = content off = 0 len = length ) ).
-    cut_word_from_content( ).
+  METHOD get_text_wordwise.
+    result = content_as_table.
   ENDMETHOD.
 
-  METHOD get_length_of_leading_word.
-    DATA(regex) = |(\\w+\\s)\{1\}|.
-    FIND FIRST OCCURRENCE OF REGEX c_regex_for_one_word IN content MATCH LENGTH result .
+  METHOD split_text_to_table.
+    SPLIT content AT space INTO TABLE content_as_table.
+    DELETE content_as_table WHERE table_line = space.
   ENDMETHOD.
 
-  METHOD cut_word_from_content.
-    DATA(length) = get_length_of_leading_word( ).
-    content = condense( substring( val = content off = length len = strlen( content ) - length ) ).
+  METHOD extract_leading_word.
+    result = content_as_table[ 1 ].
+    DELETE content_as_table INDEX 1.
   ENDMETHOD.
 
 ENDCLASS.
 
-CLASS tc_text DEFINITION FINAL FOR TESTING
+
+CLASS tc_input_text DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
-    DATA cut TYPE REF TO text.
+    DATA cut TYPE REF TO input_text.
 
     METHODS setup.
-    METHODS store_content_in_text_object FOR TESTING.
-    METHODS get_first_word_from_text     FOR TESTING.
-    METHODS get_shortend_text            FOR TESTING.
+    METHODS create_input_text_object       FOR TESTING.
+    METHODS store_text_in_object           FOR TESTING.
+    METHODS store_input_text_wordwise      FOR TESTING.
+    METHODS check_sentence_with_two_spaces FOR TESTING.
+    METHODS check_longer_sentence_w_spaces FOR TESTING.
+    METHODS check_text_with_leading_space  FOR TESTING.
+    METHODS check_text_with_trailing_space FOR TESTING.
 
+    METHODS cut_leading_word_from_text     FOR TESTING.
 ENDCLASS.
 
-
-CLASS tc_text IMPLEMENTATION.
+CLASS tc_input_text IMPLEMENTATION.
 
   METHOD setup.
-    cut = NEW #( |Hello world| ).
+    cut = NEW #( |Hello world!| ).
   ENDMETHOD.
 
-  METHOD store_content_in_text_object.
-    cut = NEW #( |Hello world| ).
-    cl_abap_unit_assert=>assert_equals( exp = |Hello world| act = cut->get_content( ) ).
+  METHOD create_input_text_object.
+    cl_abap_unit_assert=>assert_bound( act = cut msg = |The object should be bound!| ).
   ENDMETHOD.
 
-  METHOD get_first_word_from_text.
-    cl_abap_unit_assert=>assert_equals( exp = |Hello| act = cut->get_word( )  ).
+  METHOD store_text_in_object.
+    cl_abap_unit_assert=>assert_equals( exp = |Hello world!| act = cut->get_text( )  ).
   ENDMETHOD.
 
-  METHOD get_shortend_text.
-    cut->get_word( ).
-    cl_abap_unit_assert=>assert_equals( exp = |world| act = cut->get_content( ) ).
+  METHOD store_input_text_wordwise.
+    DATA(expected_text_table) = VALUE stringtab( ( |Hello|  )
+                                                 ( |world!| ) ).
+    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( )  ).
+  ENDMETHOD.
+
+  METHOD check_sentence_with_two_spaces.
+    cut = NEW input_text( |Hello  world!| ).
+    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
+                                                 ( |world!| ) ).
+    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
+  ENDMETHOD.
+
+  METHOD check_longer_sentence_w_spaces.
+    cut = NEW #( |Hello  world in   five     words!| ).
+    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
+                                                 ( |world| )
+                                                 ( |in| )
+                                                 ( |five| )
+                                                 ( |words!| ) ).
+    cl_abap_unit_assert=>assert_equals(
+        exp = expected_text_table
+        act = cut->get_text_wordwise( ) ).
+  ENDMETHOD.
+
+  METHOD check_text_with_leading_space.
+    cut = NEW #( | Hello world!| ).
+    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
+                                                 ( |world!| ) ).
+    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
+  ENDMETHOD.
+
+  METHOD check_text_with_trailing_space.
+    cut = NEW #( |Hello world! | ).
+    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
+                                                 ( |world!| ) ).
+    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
+  ENDMETHOD.
+
+  METHOD cut_leading_word_from_text.
+    DATA(expected_text_table) = VALUE stringtab( ( |world!| ) ).
+    cut->extract_leading_word( ).
+    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
   ENDMETHOD.
 
 ENDCLASS.
