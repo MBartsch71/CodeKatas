@@ -64,7 +64,7 @@ CLASS tc_russian_peasant DEFINITION FINAL FOR TESTING
 
     METHODS perform_tests        FOR TESTING.
     METHODS divide_number_by_2   FOR TESTING.
-    METHODS multiply_number_by_2 FOR TESTING.
+
 
 ENDCLASS.
 
@@ -77,8 +77,7 @@ CLASS tc_russian_peasant IMPLEMENTATION.
 
   METHOD initialize_test_cases.
     result = VALUE #( ( left = 9 right = 2 result = VALUE #( ( left = 9  right = 2 ) ) )
-                      ( left = 9 right = 2 result = VALUE #( ( left = 9  right = 2 )
-                                                             ( left = 4  right = 4 ) ) ) ).
+                      ( left = 9 right = 2 result = VALUE #( ( left = 9  right = 2 ) ) ) ).
   ENDMETHOD.
 
   METHOD perform_tests.
@@ -97,8 +96,6 @@ CLASS tc_russian_peasant IMPLEMENTATION.
         act = cut->divide_number_by_2( 9 ) ).
   ENDMETHOD.
 
-  METHOD multiply_number_by_2.
 
-  ENDMETHOD.
 
 ENDCLASS.

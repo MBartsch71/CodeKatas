@@ -99,7 +99,7 @@ CLASS ltc_cd_archive IMPLEMENTATION.
 
   METHOD investgt_archive_for_pub_date.
     cl_abap_unit_assert=>assert_table_contains(
-        line  = |AC/DC published Black Ice 11 years before.|
+        line  = |AC/DC published Black Ice 14 years before.|
         table = mo_cut->get_publishing_infos( )
         msg   = |The expected string should be returned.| ).
   ENDMETHOD.
