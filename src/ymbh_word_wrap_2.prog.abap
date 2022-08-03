@@ -2,7 +2,8 @@
 "* create input text with 2 words
 "* store input text in object
 "* try different blank settings (1 in front, 1 in the end, multiple between words
-"- cut word from text
+"* build parameterized tests
+"* cut word from text
 "- create output text object
 "- build an output text line
 "- check the output limit
@@ -13,32 +14,25 @@ REPORT ymbh_word_wrap_2.
 CLASS input_text DEFINITION FINAL.
 
   PUBLIC SECTION.
-    METHODS constructor       IMPORTING content TYPE string.
+    METHODS constructor          IMPORTING content TYPE string.
 
-    METHODS get_text          RETURNING VALUE(result) TYPE string.
 
-    METHODS get_text_wordwise RETURNING VALUE(result) TYPE stringtab.
-    METHODS extract_leading_word
-      RETURNING
-        VALUE(result) TYPE string.
+
+    METHODS get_text_wordwise    RETURNING VALUE(result) TYPE stringtab.
+
+    METHODS extract_leading_word RETURNING VALUE(result) TYPE string.
 
   PRIVATE SECTION.
-    DATA content TYPE string.
     DATA content_as_table TYPE stringtab.
 
-    METHODS split_text_to_table.
+    METHODS split_text_to_table IMPORTING content TYPE string.
 
 ENDCLASS.
 
 CLASS input_text IMPLEMENTATION.
 
   METHOD constructor.
-    me->content = content.
-    split_text_to_table( ).
-  ENDMETHOD.
-
-  METHOD get_text.
-    result = content.
+    split_text_to_table( content ).
   ENDMETHOD.
 
   METHOD get_text_wordwise.
@@ -63,71 +57,67 @@ CLASS tc_input_text DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS.
 
   PRIVATE SECTION.
+    TYPES: BEGIN OF test_running_data,
+             description     TYPE string,
+             input_text      TYPE string,
+             expected_values TYPE stringtab,
+           END OF test_running_data.
+    TYPES test_running_data_set TYPE STANDARD TABLE OF test_running_data WITH EMPTY KEY.
+
     DATA cut TYPE REF TO input_text.
+    DATA test_suite TYPE test_running_data_set.
 
     METHODS setup.
-    METHODS create_input_text_object       FOR TESTING.
-    METHODS store_text_in_object           FOR TESTING.
-    METHODS store_input_text_wordwise      FOR TESTING.
-    METHODS check_sentence_with_two_spaces FOR TESTING.
-    METHODS check_longer_sentence_w_spaces FOR TESTING.
-    METHODS check_text_with_leading_space  FOR TESTING.
-    METHODS check_text_with_trailing_space FOR TESTING.
+    METHODS build_test_suite RETURNING VALUE(result) TYPE test_running_data_set.
 
-    METHODS cut_leading_word_from_text     FOR TESTING.
+    METHODS run_word_combination_tests FOR TESTING.
+    METHODS cut_leading_word_from_text FOR TESTING.
+
 ENDCLASS.
 
 CLASS tc_input_text IMPLEMENTATION.
 
   METHOD setup.
     cut = NEW #( |Hello world!| ).
+    test_suite = build_test_suite( ).
   ENDMETHOD.
 
-  METHOD create_input_text_object.
-    cl_abap_unit_assert=>assert_bound( act = cut msg = |The object should be bound!| ).
+  METHOD build_test_suite.
+    result = VALUE #( ( description     = |Store text wordwise in object|
+                        input_text      = |Hello world!|
+                        expected_values = VALUE #( ( |Hello| )
+                                                   ( |world!| ) ) )
+
+                      ( description     = |Input text with two spaces between words|
+                        input_text      = |Hello  world!|
+                        expected_values = VALUE #( ( |Hello| )
+                                                   ( |world!| ) ) )
+
+                      ( description     = |Input text with leading space|
+                        input_text      = | Hello world!|
+                        expected_values = VALUE #( ( |Hello| )
+                                                   ( |world!| ) ) )
+
+                      ( description     = |Input text with trailing spaces|
+                        input_text      = |Hello world!  |
+                        expected_values = VALUE #( ( |Hello| )
+                                                   ( |world!| ) ) )
+
+                      ( description     = |Longer input text with varying spaces between words|
+                        input_text      = |Hello  world in   five     words!|
+                        expected_values = VALUE #( ( |Hello| )
+                                                   ( |world| )
+                                                   ( |in| )
+                                                   ( |five| )
+                                                   ( |words!| ) ) ) ).
+
   ENDMETHOD.
 
-  METHOD store_text_in_object.
-    cl_abap_unit_assert=>assert_equals( exp = |Hello world!| act = cut->get_text( )  ).
-  ENDMETHOD.
-
-  METHOD store_input_text_wordwise.
-    DATA(expected_text_table) = VALUE stringtab( ( |Hello|  )
-                                                 ( |world!| ) ).
-    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( )  ).
-  ENDMETHOD.
-
-  METHOD check_sentence_with_two_spaces.
-    cut = NEW input_text( |Hello  world!| ).
-    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
-                                                 ( |world!| ) ).
-    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
-  ENDMETHOD.
-
-  METHOD check_longer_sentence_w_spaces.
-    cut = NEW #( |Hello  world in   five     words!| ).
-    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
-                                                 ( |world| )
-                                                 ( |in| )
-                                                 ( |five| )
-                                                 ( |words!| ) ).
-    cl_abap_unit_assert=>assert_equals(
-        exp = expected_text_table
-        act = cut->get_text_wordwise( ) ).
-  ENDMETHOD.
-
-  METHOD check_text_with_leading_space.
-    cut = NEW #( | Hello world!| ).
-    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
-                                                 ( |world!| ) ).
-    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
-  ENDMETHOD.
-
-  METHOD check_text_with_trailing_space.
-    cut = NEW #( |Hello world! | ).
-    DATA(expected_text_table) = VALUE stringtab( ( |Hello| )
-                                                 ( |world!| ) ).
-    cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
+  METHOD run_word_combination_tests.
+    LOOP AT test_suite REFERENCE INTO DATA(test_case).
+      cut = NEW #( test_case->input_text ).
+      cl_abap_unit_assert=>assert_equals( exp = test_case->expected_values act = cut->get_text_wordwise( ) ).
+    ENDLOOP.
   ENDMETHOD.
 
   METHOD cut_leading_word_from_text.
