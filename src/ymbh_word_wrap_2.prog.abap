@@ -4,9 +4,9 @@
 "* try different blank settings (1 in front, 1 in the end, multiple between words
 "* build parameterized tests
 "* cut word from text
-"- create output text object
-"- build an output text line
+"* build an output text line
 "- check the output limit
+"- create output text object
 "- display the whole output text
 "- visualize limit range in output
 REPORT ymbh_word_wrap_2.
@@ -15,8 +15,6 @@ CLASS input_text DEFINITION FINAL.
 
   PUBLIC SECTION.
     METHODS constructor          IMPORTING content TYPE string.
-
-
 
     METHODS get_text_wordwise    RETURNING VALUE(result) TYPE stringtab.
 
@@ -47,6 +45,37 @@ CLASS input_text IMPLEMENTATION.
   METHOD extract_leading_word.
     result = content_as_table[ 1 ].
     DELETE content_as_table INDEX 1.
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS output_line DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    METHODS constructor IMPORTING text TYPE string.
+
+    METHODS content     RETURNING VALUE(result) TYPE string.
+
+    METHODS add_word    IMPORTING word          TYPE string
+                        RETURNING VALUE(result) TYPE REF TO output_line.
+
+  PRIVATE SECTION.
+    DATA text TYPE string.
+
+ENDCLASS.
+
+CLASS output_line IMPLEMENTATION.
+
+  METHOD constructor.
+    me->text = text.
+  ENDMETHOD.
+
+  METHOD content.
+    result = text.
+  ENDMETHOD.
+
+  METHOD add_word.
+    result = NEW #( |{ text } { word }| ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -124,6 +153,36 @@ CLASS tc_input_text IMPLEMENTATION.
     DATA(expected_text_table) = VALUE stringtab( ( |world!| ) ).
     cut->extract_leading_word( ).
     cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS tc_output_line DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO output_line.
+
+    METHODS setup.
+    METHODS get_output_line         FOR TESTING.
+    METHODS add_word_to_output_line FOR TESTING.
+
+ENDCLASS.
+
+CLASS tc_output_line IMPLEMENTATION.
+
+  METHOD setup.
+    cut = NEW #( |Hello| ).
+  ENDMETHOD.
+
+  METHOD get_output_line.
+    cl_abap_unit_assert=>assert_equals( exp = |Hello| act = cut->content( )  ).
+  ENDMETHOD.
+
+  METHOD add_word_to_output_line.
+    cut = cut->add_word( |world!| ).
+    cl_abap_unit_assert=>assert_equals( exp = |Hello world!| act = cut->content( )  ).
   ENDMETHOD.
 
 ENDCLASS.
