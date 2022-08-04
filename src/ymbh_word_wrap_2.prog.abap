@@ -5,11 +5,14 @@
 "* build parameterized tests
 "* cut word from text
 "* build an output text line
-"- check the output limit
+"* check the output limit
 "- create output text object
 "- display the whole output text
 "- visualize limit range in output
 REPORT ymbh_word_wrap_2.
+
+CLASS x_line_limit_exceeded DEFINITION INHERITING FROM cx_no_check FINAL.
+ENDCLASS.
 
 CLASS input_text DEFINITION FINAL.
 
@@ -59,8 +62,13 @@ CLASS output_line DEFINITION FINAL.
     METHODS add_word    IMPORTING word          TYPE string
                         RETURNING VALUE(result) TYPE REF TO output_line.
 
+    METHODS limit       RETURNING VALUE(result) TYPE i.
+
+    METHODS set_limit   IMPORTING line_width TYPE i.
+
   PRIVATE SECTION.
     DATA text TYPE string.
+    DATA line_width_limit TYPE i VALUE 80.
 
 ENDCLASS.
 
@@ -75,7 +83,19 @@ CLASS output_line IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD add_word.
+    DATA(new_line_length) = strlen( text ) + strlen( word ) + 1.
+    IF new_line_length > line_width_limit.
+      RAISE EXCEPTION TYPE x_line_limit_exceeded.
+    ENDIF.
     result = NEW #( |{ text } { word }| ).
+  ENDMETHOD.
+
+  METHOD limit.
+    result = line_width_limit.
+  ENDMETHOD.
+
+  METHOD set_limit.
+    line_width_limit = line_width.
   ENDMETHOD.
 
 ENDCLASS.
@@ -165,8 +185,12 @@ CLASS tc_output_line DEFINITION FINAL FOR TESTING
     DATA cut TYPE REF TO output_line.
 
     METHODS setup.
-    METHODS get_output_line         FOR TESTING.
-    METHODS add_word_to_output_line FOR TESTING.
+    METHODS get_output_line               FOR TESTING.
+    METHODS add_word_to_output_line       FOR TESTING.
+    METHODS get_the_default_line_limit    FOR TESTING.
+    METHODS set_specifiv_line_limit       FOR TESTING.
+    METHODS exception_at_exceeding_line   FOR TESTING.
+    METHODS build_specific_line_wo_excptn FOR TESTING.
 
 ENDCLASS.
 
@@ -183,6 +207,39 @@ CLASS tc_output_line IMPLEMENTATION.
   METHOD add_word_to_output_line.
     cut = cut->add_word( |world!| ).
     cl_abap_unit_assert=>assert_equals( exp = |Hello world!| act = cut->content( )  ).
+  ENDMETHOD.
+
+  METHOD get_the_default_line_limit.
+    cl_abap_unit_assert=>assert_equals( exp = 80 act = cut->limit( )  ).
+  ENDMETHOD.
+
+  METHOD set_specifiv_line_limit.
+    cut->set_limit( 34 ).
+    cl_abap_unit_assert=>assert_equals( exp = 34 act = cut->limit( )  ).
+  ENDMETHOD.
+
+  METHOD exception_at_exceeding_line.
+    cut->set_limit( 10 ).
+    TRY.
+        cut->add_word( |world!| ).
+        DATA(content) = cut->content( ).
+        cl_abap_unit_assert=>fail( ).
+      CATCH x_line_limit_exceeded INTO DATA(error).
+        cl_abap_unit_assert=>assert_bound( act = error msg = |The object should be bound!| ).
+    ENDTRY.
+  ENDMETHOD.
+
+  METHOD build_specific_line_wo_excptn.
+    cut->set_limit( 30 ).
+    TRY.
+        cut = cut->add_word( |world| ).
+        cut = cut->add_word( |with| ).
+        cut = cut->add_word( |five| ).
+        cut = cut->add_word( |words!| ).
+        cl_abap_unit_assert=>assert_equals( exp = |Hello world with five words!| act = cut->content( ) ).
+      CATCH x_line_limit_exceeded.
+        cl_abap_unit_assert=>fail( ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
