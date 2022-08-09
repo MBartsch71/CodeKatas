@@ -11,6 +11,7 @@
 "* build output text table
 "* add 2 lines to output text table
 "- application class
+"- simulate run in application class
 "- possibility to input text
 "- possibility to input the output text width
 "- display the whole output text
@@ -101,6 +102,7 @@ CLASS output_line IMPLEMENTATION.
       RAISE EXCEPTION TYPE x_line_limit_exceeded.
     ENDIF.
     result = NEW #( |{ text } { word }| ).
+    result->set_limit( line_width_limit ).
   ENDMETHOD.
 
   METHOD limit.
@@ -133,6 +135,47 @@ CLASS output_text IMPLEMENTATION.
 
   METHOD add_line.
     content = VALUE #( BASE content ( line ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+CLASS application DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    METHODS main IMPORTING text          TYPE string
+                           length        TYPE i
+                 RETURNING VALUE(result) TYPE stringtab.
+
+  PRIVATE SECTION.
+
+ENDCLASS.
+
+CLASS application IMPLEMENTATION.
+
+
+  METHOD main.
+    DATA(input_text) = NEW input_text( text ).
+    DATA(output_line) = NEW output_line( || ).
+    DATA(output_text) = NEW output_text( ).
+    output_line->set_limit( length ).
+    DO.
+      TRY.
+          DO.
+            TRY.
+                DATA(word) = input_text->extract_leading_word( ).
+                output_line = output_line->add_word( word ).
+              CATCH x_line_limit_exceeded.
+                output_text->add_line( output_line->content( ) ).
+                output_line = NEW output_line( || ).
+                output_line->set_limit( length ).
+            ENDTRY.
+          ENDDO.
+        CATCH x_input_text_empty.
+          EXIT.
+      ENDTRY.
+    ENDDO.
+
+    result = output_text->output( ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -327,10 +370,40 @@ CLASS tc_output_text IMPLEMENTATION.
 
 ENDCLASS.
 
+CLASS tc_application DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
 
-PARAMETERS: width    TYPE i,
-            inp_text TYPE string.
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO application.
 
+    METHODS setup.
+    METHODS create_application_object FOR TESTING.
+    METHODS execute_complete_word_wrapping FOR TESTING.
 
-START-OF-SELECTION.
-  WRITE: / 'Hello'.
+ENDCLASS.
+
+CLASS tc_application IMPLEMENTATION.
+
+  METHOD setup.
+    cut = NEW #( ).
+  ENDMETHOD.
+
+  METHOD create_application_object.
+    cl_abap_unit_assert=>assert_bound( act = cut msg = |The object should be bound!| ).
+  ENDMETHOD.
+
+  METHOD execute_complete_word_wrapping.
+    DATA(input_text) = |Es blaut die Nacht, die Sternlein blinken, | &&
+                       |Schneeflöcklein leis hernieder sinken.|.
+    DATA(expected_output_table) = VALUE stringtab(  ( |Es blaut die| )
+                                                    ( |Nacht, die| )
+                                                    ( |Sternlein| )
+                                                    ( |blinken,| )
+                                                    ( |Schneeflöcklein| )
+                                                    ( |leis hernieder| )
+                                                    ( |sinken.| ) ).
+    cl_abap_unit_assert=>assert_equals( exp =  expected_output_table act = cut->main( text = input_text length = 15 )  ).
+  ENDMETHOD.
+
+ENDCLASS.
