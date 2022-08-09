@@ -4,12 +4,21 @@
 "* try different blank settings (1 in front, 1 in the end, multiple between words
 "* build parameterized tests
 "* cut word from text
+"* check if text is empty
 "* build an output text line
 "* check the output limit
-"- create output text object
+"* create output text object
+"* build output text table
+"* add 2 lines to output text table
+"- application class
+"- possibility to input text
+"- possibility to input the output text width
 "- display the whole output text
 "- visualize limit range in output
 REPORT ymbh_word_wrap_2.
+
+CLASS x_input_text_empty DEFINITION INHERITING FROM cx_no_check FINAL.
+ENDCLASS.
 
 CLASS x_line_limit_exceeded DEFINITION INHERITING FROM cx_no_check FINAL.
 ENDCLASS.
@@ -46,8 +55,12 @@ CLASS input_text IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD extract_leading_word.
-    result = content_as_table[ 1 ].
-    DELETE content_as_table INDEX 1.
+    TRY.
+        result = content_as_table[ 1 ].
+        DELETE content_as_table INDEX 1.
+      CATCH cx_sy_itab_line_not_found.
+        RAISE EXCEPTION TYPE x_input_text_empty.
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -100,6 +113,30 @@ CLASS output_line IMPLEMENTATION.
 
 ENDCLASS.
 
+CLASS output_text DEFINITION FINAL.
+
+  PUBLIC SECTION.
+    METHODS add_line IMPORTING line TYPE string.
+
+    METHODS output   RETURNING VALUE(result) TYPE stringtab.
+
+  PRIVATE SECTION.
+    DATA content TYPE stringtab.
+
+ENDCLASS.
+
+CLASS output_text IMPLEMENTATION.
+
+  METHOD output.
+    result = content.
+  ENDMETHOD.
+
+  METHOD add_line.
+    content = VALUE #( BASE content ( line ) ).
+  ENDMETHOD.
+
+ENDCLASS.
+
 
 CLASS tc_input_text DEFINITION FINAL FOR TESTING
   DURATION SHORT
@@ -119,8 +156,9 @@ CLASS tc_input_text DEFINITION FINAL FOR TESTING
     METHODS setup.
     METHODS build_test_suite RETURNING VALUE(result) TYPE test_running_data_set.
 
-    METHODS run_word_combination_tests FOR TESTING.
-    METHODS cut_leading_word_from_text FOR TESTING.
+    METHODS run_word_combination_tests    FOR TESTING.
+    METHODS cut_leading_word_from_text    FOR TESTING.
+    METHODS exception_at_empty_input_text FOR TESTING.
 
 ENDCLASS.
 
@@ -173,6 +211,17 @@ CLASS tc_input_text IMPLEMENTATION.
     DATA(expected_text_table) = VALUE stringtab( ( |world!| ) ).
     cut->extract_leading_word( ).
     cl_abap_unit_assert=>assert_equals( exp = expected_text_table act = cut->get_text_wordwise( ) ).
+  ENDMETHOD.
+
+  METHOD exception_at_empty_input_text.
+    TRY.
+        DO 3 TIMES.
+          cut->extract_leading_word( ).
+        ENDDO.
+        cl_abap_unit_assert=>fail( ).
+      CATCH x_input_text_empty INTO DATA(error).
+        cl_abap_unit_assert=>assert_bound( act = error msg = |The object should be bound!| ).
+    ENDTRY.
   ENDMETHOD.
 
 ENDCLASS.
@@ -243,3 +292,45 @@ CLASS tc_output_line IMPLEMENTATION.
   ENDMETHOD.
 
 ENDCLASS.
+
+CLASS tc_output_text DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO output_text.
+
+    METHODS setup.
+    METHODS create_output_text_object FOR TESTING.
+    METHODS build_output_text_table   FOR TESTING.
+
+ENDCLASS.
+
+CLASS tc_output_text IMPLEMENTATION.
+
+  METHOD setup.
+    cut = NEW #( ).
+  ENDMETHOD.
+
+  METHOD create_output_text_object.
+    cl_abap_unit_assert=>assert_bound( act = cut msg = |The object should be bound!| ).
+  ENDMETHOD.
+
+  METHOD build_output_text_table.
+    cut->add_line( |Hello world in| ).
+    cut->add_line( |five words!| ).
+    DATA(expected_output_table) = VALUE stringtab( ( |Hello world in| )
+                                                   ( |five words!| ) ).
+
+    cl_abap_unit_assert=>assert_equals( exp = expected_output_table act = cut->output( )  ).
+  ENDMETHOD.
+
+ENDCLASS.
+
+
+PARAMETERS: width    TYPE i,
+            inp_text TYPE string.
+
+
+START-OF-SELECTION.
+  WRITE: / 'Hello'.
