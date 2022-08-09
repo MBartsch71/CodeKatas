@@ -10,12 +10,13 @@
 "* create output text object
 "* build output text table
 "* add 2 lines to output text table
-"- application class
-"- simulate run in application class
+"* application class
+"* simulate run in application class
 "- possibility to input text
 "- possibility to input the output text width
 "- display the whole output text
 "- visualize limit range in output
+
 REPORT ymbh_word_wrap_2.
 
 CLASS x_input_text_empty DEFINITION INHERITING FROM cx_no_check FINAL.
@@ -84,6 +85,9 @@ CLASS output_line DEFINITION FINAL.
     DATA text TYPE string.
     DATA line_width_limit TYPE i VALUE 80.
 
+    METHODS add_word_to_output_line IMPORTING word          TYPE string
+                                    RETURNING VALUE(result) TYPE REF TO output_line.
+
 ENDCLASS.
 
 CLASS output_line IMPLEMENTATION.
@@ -101,7 +105,7 @@ CLASS output_line IMPLEMENTATION.
     IF new_line_length > line_width_limit.
       RAISE EXCEPTION TYPE x_line_limit_exceeded.
     ENDIF.
-    result = NEW #( |{ text } { word }| ).
+    result = add_word_to_output_line( word ).
     result->set_limit( line_width_limit ).
   ENDMETHOD.
 
@@ -111,6 +115,12 @@ CLASS output_line IMPLEMENTATION.
 
   METHOD set_limit.
     line_width_limit = line_width.
+  ENDMETHOD.
+
+  METHOD add_word_to_output_line.
+    DATA(new_line) = |{ text } { word }|.
+    CONDENSE new_line.
+    result = NEW output_line( new_line ).
   ENDMETHOD.
 
 ENDCLASS.
@@ -151,13 +161,14 @@ CLASS application DEFINITION FINAL.
 ENDCLASS.
 
 CLASS application IMPLEMENTATION.
-
-
+##TODO "Refactoring the loops
   METHOD main.
     DATA(input_text) = NEW input_text( text ).
     DATA(output_line) = NEW output_line( || ).
     DATA(output_text) = NEW output_text( ).
+
     output_line->set_limit( length ).
+
     DO.
       TRY.
           DO.
@@ -166,11 +177,12 @@ CLASS application IMPLEMENTATION.
                 output_line = output_line->add_word( word ).
               CATCH x_line_limit_exceeded.
                 output_text->add_line( output_line->content( ) ).
-                output_line = NEW output_line( || ).
+                output_line = NEW output_line( word ).
                 output_line->set_limit( length ).
             ENDTRY.
           ENDDO.
         CATCH x_input_text_empty.
+          output_text->add_line( output_line->content( ) ).
           EXIT.
       ENDTRY.
     ENDDO.
@@ -378,7 +390,7 @@ CLASS tc_application DEFINITION FINAL FOR TESTING
     DATA cut TYPE REF TO application.
 
     METHODS setup.
-    METHODS create_application_object FOR TESTING.
+    METHODS create_application_object      FOR TESTING.
     METHODS execute_complete_word_wrapping FOR TESTING.
 
 ENDCLASS.
@@ -396,6 +408,7 @@ CLASS tc_application IMPLEMENTATION.
   METHOD execute_complete_word_wrapping.
     DATA(input_text) = |Es blaut die Nacht, die Sternlein blinken, | &&
                        |Schneeflöcklein leis hernieder sinken.|.
+
     DATA(expected_output_table) = VALUE stringtab(  ( |Es blaut die| )
                                                     ( |Nacht, die| )
                                                     ( |Sternlein| )
@@ -403,6 +416,7 @@ CLASS tc_application IMPLEMENTATION.
                                                     ( |Schneeflöcklein| )
                                                     ( |leis hernieder| )
                                                     ( |sinken.| ) ).
+
     cl_abap_unit_assert=>assert_equals( exp =  expected_output_table act = cut->main( text = input_text length = 15 )  ).
   ENDMETHOD.
 
