@@ -28,6 +28,10 @@ CLASS tc_tennis DEFINITION FINAL FOR TESTING
     METHODS both_players_score_3_times FOR TESTING.
 
     METHODS player_one_advantage FOR TESTING.
+    METHODS player_two_advantage FOR TESTING.
+
+    METHODS player_one_win FOR TESTING.
+    METHODS player_two_win FOR TESTING.
 
     METHODS score RETURNING VALUE(result) TYPE string.
     METHODS translate IMPORTING player_score  TYPE i
@@ -52,6 +56,9 @@ CLASS tc_tennis IMPLEMENTATION.
   METHOD check_score.
     result = SWITCH #( score  WHEN 'FOURTY FOURTY' THEN 'DEUCE'
                               WHEN 'ADVANTAGE FOURTY' THEN 'ADVANTAGE Player 1'
+                              WHEN 'FOURTY ADVANTAGE' THEN 'ADVANTAGE Player 2'
+                              WHEN 'GAME FOURTY' THEN 'GAME Player 1'
+                              WHEN 'FOURTY GAME' THEN 'GAME Player 2'
                               ELSE score ).
   ENDMETHOD.
 
@@ -89,6 +96,24 @@ CLASS tc_tennis IMPLEMENTATION.
     player_one_score = 4.
     player_two_score = 3.
     cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 1| act = score( ) ).
+  ENDMETHOD.
+
+  METHOD player_two_advantage.
+    player_one_score = 3.
+    player_two_score = 4.
+    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 2| act = score( ) ).
+  ENDMETHOD.
+
+  METHOD player_one_win.
+    player_one_score = 5.
+    player_two_score = 3.
+    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 1| act = score( ) ).
+  ENDMETHOD.
+
+  METHOD player_two_win.
+    player_one_score = 3.
+    player_two_score = 5.
+    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 2| act = score( ) ).
   ENDMETHOD.
 
 ENDCLASS.
