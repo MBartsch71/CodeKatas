@@ -1,9 +1,16 @@
 REPORT ymbh_tennis_001.
 
-
 CLASS tc_tennis DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
+
+  PUBLIC SECTION.
+    TYPES: BEGIN OF ENUM points,
+             love,
+             fifteen,
+             thirty,
+             fourty,
+           END OF ENUM points.
 
   PRIVATE SECTION.
     DATA player_one_score TYPE i.
@@ -28,34 +35,31 @@ CLASS tc_tennis IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD report_the_initial_score.
-    cl_abap_unit_assert=>assert_equals( exp = |love love| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE LOVE| act = score( ) ).
   ENDMETHOD.
 
   METHOD player_one_scored_once.
     player_two_score = 1.
-    cl_abap_unit_assert=>assert_equals( exp = |love fifteen| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE FIFTEEN| act = score( ) ).
   ENDMETHOD.
 
   METHOD player_one_scores_twice.
     player_two_score = 2.
-    cl_abap_unit_assert=>assert_equals( exp = |love thirty| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE THIRTY| act = score( ) ).
   ENDMETHOD.
 
   METHOD player_2_scored_once.
     player_one_score = 1.
-    cl_abap_unit_assert=>assert_equals( exp = |fifteen love| act = score( )  ).
+    cl_abap_unit_assert=>assert_equals( exp = |FIFTEEN LOVE| act = score( )  ).
   ENDMETHOD.
 
   METHOD translate.
-    result = SWITCH #( player_score WHEN 0 THEN |love|
-                                    WHEN 1 THEN |fifteen|
-                                    WHEN 2 THEN |thirty|
-                                    WHEN 3 THEN |fourty| ).
+    result = CONV points( player_score ).
   ENDMETHOD.
 
   METHOD player_2_scored_3_times.
     player_two_score = 3.
-    cl_abap_unit_assert=>assert_equals( exp = |love fourty| act = score( )  ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE FOURTY| act = score( )  ).
   ENDMETHOD.
 
 ENDCLASS.
