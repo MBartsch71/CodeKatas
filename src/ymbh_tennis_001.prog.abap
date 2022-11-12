@@ -33,11 +33,20 @@ CLASS score DEFINITION.
              game,
            END OF ENUM points.
 
+    TYPES: BEGIN OF ts_translation,
+             source_expression TYPE string,
+             translation       TYPE string,
+           END OF ts_translation.
+    TYPES tt_translation TYPE STANDARD TABLE OF ts_translation WITH EMPTY KEY.
+
+    METHODS constructor.
     METHODS display IMPORTING player_1      TYPE REF TO player
                               player_2      TYPE REF TO player
                     RETURNING VALUE(result) TYPE string.
 
   PRIVATE SECTION.
+    DATA translation TYPE tt_translation.
+
     METHODS check_score IMPORTING score         TYPE string
                         RETURNING VALUE(result) TYPE string.
 
@@ -48,17 +57,21 @@ ENDCLASS.
 
 CLASS score IMPLEMENTATION.
 
+  METHOD constructor.
+    translation = VALUE #(
+                    ( source_expression = |FOURTY FOURTY|    translation = |DEUCE| )
+                    ( source_expression = |ADVANTAGE FOURTY| translation = |ADVANTAGE Player 1| )
+                    ( source_expression = |FOURTY ADVANTAGE| translation = |ADVANTAGE Player 2| )
+                    ( source_expression = |GAME FOURTY|      translation = |GAME Player 1| )
+                    ( source_expression = |FOURTY GAME|      translation = |GAME Player 2| ) ).
+  ENDMETHOD.
+
   METHOD display.
     result = check_score( |{ translate( player_1->get_points( ) ) } { translate( player_2->get_points( ) ) }| ).
   ENDMETHOD.
 
   METHOD check_score.
-    result = SWITCH #( score  WHEN 'FOURTY FOURTY' THEN 'DEUCE'
-                              WHEN 'ADVANTAGE FOURTY' THEN 'ADVANTAGE Player 1'
-                              WHEN 'FOURTY ADVANTAGE' THEN 'ADVANTAGE Player 2'
-                              WHEN 'GAME FOURTY' THEN 'GAME Player 1'
-                              WHEN 'FOURTY GAME' THEN 'GAME Player 2'
-                              ELSE score ).
+    result = VALUE #( translation[ source_expression = score ]-translation DEFAULT score ).
   ENDMETHOD.
 
   METHOD translate.
