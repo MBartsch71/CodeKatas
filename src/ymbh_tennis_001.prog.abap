@@ -5,9 +5,7 @@ CLASS player DEFINITION.
     METHODS constructor IMPORTING name TYPE string.
 
     METHODS score.
-
     METHODS get_points RETURNING VALUE(result) TYPE i.
-    METHODS get_name RETURNING VALUE(result) TYPE string.
 
   PRIVATE SECTION.
     DATA points TYPE i.
@@ -28,23 +26,6 @@ CLASS player IMPLEMENTATION.
   METHOD get_points.
     result = points.
   ENDMETHOD.
-
-  METHOD get_name.
-    result = name.
-  ENDMETHOD.
-
-ENDCLASS.
-
-CLASS tc_player DEFINITION FINAL FOR TESTING
-  DURATION SHORT
-  RISK LEVEL HARMLESS.
-
-  PRIVATE SECTION.
-    DATA cut TYPE REF TO player.
-
-    METHODS setup.
-    METHODS get_one_point FOR TESTING.
-    METHODS get_name FOR TESTING.
 
 ENDCLASS.
 
@@ -80,16 +61,29 @@ CLASS score IMPLEMENTATION.
 
   METHOD check_score.
     result = SWITCH #( score  WHEN 'FOURTY FOURTY' THEN 'DEUCE'
-                                  WHEN 'ADVANTAGE FOURTY' THEN 'ADVANTAGE Player 1'
-                                  WHEN 'FOURTY ADVANTAGE' THEN 'ADVANTAGE Player 2'
-                                  WHEN 'GAME FOURTY' THEN 'GAME Player 1'
-                                  WHEN 'FOURTY GAME' THEN 'GAME Player 2'
-                                  ELSE score ).  ENDMETHOD.
-
+                              WHEN 'ADVANTAGE FOURTY' THEN 'ADVANTAGE Player 1'
+                              WHEN 'FOURTY ADVANTAGE' THEN 'ADVANTAGE Player 2'
+                              WHEN 'GAME FOURTY' THEN 'GAME Player 1'
+                              WHEN 'FOURTY GAME' THEN 'GAME Player 2'
+                              ELSE score ).
+  ENDMETHOD.
 
   METHOD translate.
     result = CONV points( player_score ).
   ENDMETHOD.
+
+ENDCLASS.
+
+
+CLASS tc_player DEFINITION FINAL FOR TESTING
+  DURATION SHORT
+  RISK LEVEL HARMLESS.
+
+  PRIVATE SECTION.
+    DATA cut TYPE REF TO player.
+
+    METHODS setup.
+    METHODS get_one_point FOR TESTING.
 
 ENDCLASS.
 
@@ -104,10 +98,6 @@ CLASS tc_player IMPLEMENTATION.
     cl_abap_unit_assert=>assert_equals( exp = 1 act = cut->get_points( )  ).
   ENDMETHOD.
 
-  METHOD get_name.
-    cl_abap_unit_assert=>assert_equals( exp = |1| act = cut->get_name( )  ).
-  ENDMETHOD.
-
 ENDCLASS.
 
 CLASS tc_score DEFINITION FINAL FOR TESTING
@@ -115,6 +105,14 @@ CLASS tc_score DEFINITION FINAL FOR TESTING
   RISK LEVEL HARMLESS.
 
   PUBLIC SECTION.
+    TYPES: BEGIN OF ts_test,
+             description         TYPE string,
+             player1_scores      TYPE i,
+             player2_scores      TYPE i,
+             expected_game_score TYPE string,
+           END OF ts_test.
+    TYPES tt_tests TYPE STANDARD TABLE OF ts_test WITH EMPTY KEY.
+
     TYPES: BEGIN OF ENUM points,
              love,
              fifteen,
@@ -125,109 +123,47 @@ CLASS tc_score DEFINITION FINAL FOR TESTING
            END OF ENUM points.
 
   PRIVATE SECTION.
-    DATA cut TYPE REF TO score.
-
-    DATA player1 TYPE REF TO player.
-    DATA player2 TYPE REF TO player.
-
-    METHODS setup.
-    METHODS report_the_initial_score FOR TESTING.
-    METHODS player_one_scored_once FOR TESTING.
-    METHODS player_one_scores_twice FOR TESTING.
-
-    METHODS player_2_scored_once FOR TESTING.
-    METHODS player_2_scored_3_times FOR TESTING.
-
-    METHODS both_players_score_3_times FOR TESTING.
-
-    METHODS player_one_advantage FOR TESTING.
-    METHODS player_two_advantage FOR TESTING.
-
-    METHODS player_one_win FOR TESTING.
-    METHODS player_two_win FOR TESTING.
+    METHODS run_test_suite FOR TESTING.
+    METHODS execute_tests IMPORTING tests TYPE tt_tests.
 
 ENDCLASS.
 
 CLASS tc_score IMPLEMENTATION.
 
-  METHOD setup.
-    cut = NEW #( ).
-    player1 = NEW #( |1| ).
-    player2 = NEW #( |2| ).
+  METHOD execute_tests.
+    DATA(cut) = NEW score( ).
+
+    LOOP AT tests REFERENCE INTO DATA(test).
+      DATA(player1) = NEW player( |1| ).
+      DATA(player2) = NEW player( |2| ).
+      DO test->player1_scores TIMES.
+        player1->score( ).
+      ENDDO.
+      DO test->player2_scores TIMES.
+        player2->score( ).
+      ENDDO.
+      cl_abap_unit_assert=>assert_equals( exp = test->expected_game_score
+                                          act = cut->display( player_1 = player1 player_2 = player2 )
+                                          msg = test->description
+                                          quit = if_aunit_constants=>no  ).
+
+    ENDLOOP.
   ENDMETHOD.
 
-  METHOD report_the_initial_score.
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE LOVE| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_one_scored_once.
-    player2->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE FIFTEEN| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_one_scores_twice.
-    DO 2 TIMES.
-      player2->score( ).
-    ENDDO.
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE THIRTY| act = cut->display( player_1 = player1 player_2 = player2  ) ).
-  ENDMETHOD.
-
-  METHOD player_2_scored_once.
-    player1->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |FIFTEEN LOVE| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_2_scored_3_times.
-    DO 3 TIMES.
-      player2->score( ).
-    ENDDO.
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE FOURTY| act = cut->display( player_1 = player1 player_2 = player2 )  ).
-  ENDMETHOD.
-
-  METHOD both_players_score_3_times.
-    DO 3 TIMES.
-      player1->score( ).
-      player2->score( ).
-    ENDDO.
-    cl_abap_unit_assert=>assert_equals( exp = |DEUCE| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_one_advantage.
-    DO 3 TIMES.
-      player1->score( ).
-      player2->score( ).
-    ENDDO.
-    player1->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 1| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_two_advantage.
-    DO 3 TIMES.
-      player1->score( ).
-      player2->score( ).
-    ENDDO.
-    player2->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 2| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_one_win.
-    DO 3 TIMES.
-      player1->score( ).
-      player2->score( ).
-    ENDDO.
-    player1->score( ).
-    player1->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 1| act = cut->display( player_1 = player1 player_2 = player2 ) ).
-  ENDMETHOD.
-
-  METHOD player_two_win.
-    DO 3 TIMES.
-      player1->score( ).
-      player2->score( ).
-    ENDDO.
-    player2->score( ).
-    player2->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 2| act = cut->display( player_1 = player1 player_2 = player2 ) ).
+  METHOD run_test_suite.
+    DATA(tests_setup) = VALUE tt_tests(
+      ( description = |Report the initial score|    expected_game_score = |LOVE LOVE|          player1_scores = 0 player2_scores = 0 )
+      ( description = |Player 1 scores once|        expected_game_score = |FIFTEEN LOVE|       player1_scores = 1 player2_scores = 0 )
+      ( description = |Player 1 scores twice|       expected_game_score = |THIRTY LOVE|        player1_scores = 2 player2_scores = 0 )
+      ( description = |Player 2 scores once|        expected_game_score = |LOVE FIFTEEN|       player1_scores = 0 player2_scores = 1 )
+      ( description = |Player 2 scores 3 times|     expected_game_score = |LOVE FOURTY|        player1_scores = 0 player2_scores = 3 )
+      ( description = |Both players scores 3 times| expected_game_score = |DEUCE|              player1_scores = 3 player2_scores = 3 )
+      ( description = |Player 1 advantage|          expected_game_score = |ADVANTAGE Player 1| player1_scores = 4 player2_scores = 3 )
+      ( description = |Player 2 advantage|          expected_game_score = |ADVANTAGE Player 2| player1_scores = 3 player2_scores = 4 )
+      ( description = |Player 1 win|                expected_game_score = |GAME Player 1|      player1_scores = 5 player2_scores = 3 )
+      ( description = |Player 2 win|                expected_game_score = |GAME Player 2|      player1_scores = 3 player2_scores = 5 )
+     ).
+    execute_tests( tests_setup ).
   ENDMETHOD.
 
 ENDCLASS.
