@@ -2,22 +2,15 @@ REPORT ymbh_tennis_001.
 
 CLASS player DEFINITION.
   PUBLIC SECTION.
-    METHODS constructor IMPORTING name TYPE string.
-
     METHODS score.
     METHODS get_points RETURNING VALUE(result) TYPE i.
 
   PRIVATE SECTION.
     DATA points TYPE i.
-    DATA name TYPE string.
 
 ENDCLASS.
 
 CLASS player IMPLEMENTATION.
-
-  METHOD constructor.
-    me->name = name.
-  ENDMETHOD.
 
   METHOD score.
     points = points + 1.
@@ -90,7 +83,7 @@ ENDCLASS.
 CLASS tc_player IMPLEMENTATION.
 
   METHOD setup.
-    cut = NEW #( |1| ).
+    cut = NEW #( ).
   ENDMETHOD.
 
   METHOD get_one_point.
@@ -134,8 +127,8 @@ CLASS tc_score IMPLEMENTATION.
     DATA(cut) = NEW score( ).
 
     LOOP AT tests REFERENCE INTO DATA(test).
-      DATA(player1) = NEW player( |1| ).
-      DATA(player2) = NEW player( |2| ).
+      DATA(player1) = NEW player( ).
+      DATA(player2) = NEW player( ).
       DO test->player1_scores TIMES.
         player1->score( ).
       ENDDO.
@@ -146,7 +139,6 @@ CLASS tc_score IMPLEMENTATION.
                                           act = cut->display( player_1 = player1 player_2 = player2 )
                                           msg = test->description
                                           quit = if_aunit_constants=>no  ).
-
     ENDLOOP.
   ENDMETHOD.
 
