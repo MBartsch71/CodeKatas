@@ -48,6 +48,51 @@ CLASS tc_player DEFINITION FINAL FOR TESTING
 
 ENDCLASS.
 
+CLASS score DEFINITION.
+  PUBLIC SECTION.
+    TYPES: BEGIN OF ENUM points,
+             love,
+             fifteen,
+             thirty,
+             fourty,
+             advantage,
+             game,
+           END OF ENUM points.
+
+    METHODS display IMPORTING player_1      TYPE REF TO player
+                              player_2      TYPE REF TO player
+                    RETURNING VALUE(result) TYPE string.
+
+  PRIVATE SECTION.
+    METHODS check_score IMPORTING score         TYPE string
+                        RETURNING VALUE(result) TYPE string.
+
+    METHODS translate IMPORTING player_score  TYPE i
+                      RETURNING VALUE(result) TYPE string.
+
+ENDCLASS.
+
+CLASS score IMPLEMENTATION.
+
+  METHOD display.
+    result = check_score( |{ translate( player_1->get_points( ) ) } { translate( player_2->get_points( ) ) }| ).
+  ENDMETHOD.
+
+  METHOD check_score.
+    result = SWITCH #( score  WHEN 'FOURTY FOURTY' THEN 'DEUCE'
+                                  WHEN 'ADVANTAGE FOURTY' THEN 'ADVANTAGE Player 1'
+                                  WHEN 'FOURTY ADVANTAGE' THEN 'ADVANTAGE Player 2'
+                                  WHEN 'GAME FOURTY' THEN 'GAME Player 1'
+                                  WHEN 'FOURTY GAME' THEN 'GAME Player 2'
+                                  ELSE score ).  ENDMETHOD.
+
+
+  METHOD translate.
+    result = CONV points( player_score ).
+  ENDMETHOD.
+
+ENDCLASS.
+
 CLASS tc_player IMPLEMENTATION.
 
   METHOD setup.
@@ -65,7 +110,7 @@ CLASS tc_player IMPLEMENTATION.
 
 ENDCLASS.
 
-CLASS tc_tennis DEFINITION FINAL FOR TESTING
+CLASS tc_score DEFINITION FINAL FOR TESTING
   DURATION SHORT
   RISK LEVEL HARMLESS.
 
@@ -80,6 +125,8 @@ CLASS tc_tennis DEFINITION FINAL FOR TESTING
            END OF ENUM points.
 
   PRIVATE SECTION.
+    DATA cut TYPE REF TO score.
+
     DATA player1 TYPE REF TO player.
     DATA player2 TYPE REF TO player.
 
@@ -99,66 +146,42 @@ CLASS tc_tennis DEFINITION FINAL FOR TESTING
     METHODS player_one_win FOR TESTING.
     METHODS player_two_win FOR TESTING.
 
-    METHODS score RETURNING VALUE(result) TYPE string.
-
-    METHODS translate IMPORTING player_score  TYPE i
-                      RETURNING VALUE(result) TYPE string.
-
-    METHODS check_score IMPORTING score         TYPE string
-                        RETURNING VALUE(result) TYPE string.
-
 ENDCLASS.
 
-CLASS tc_tennis IMPLEMENTATION.
+CLASS tc_score IMPLEMENTATION.
 
   METHOD setup.
+    cut = NEW #( ).
     player1 = NEW #( |1| ).
     player2 = NEW #( |2| ).
   ENDMETHOD.
 
-  METHOD score.
-    result = check_score( |{ translate( player1->get_points( ) ) } { translate( player2->get_points( ) ) }| ).
-  ENDMETHOD.
-
-  METHOD translate.
-    result = CONV points( player_score ).
-  ENDMETHOD.
-
-  METHOD check_score.
-    result = SWITCH #( score  WHEN 'FOURTY FOURTY' THEN 'DEUCE'
-                              WHEN 'ADVANTAGE FOURTY' THEN 'ADVANTAGE Player 1'
-                              WHEN 'FOURTY ADVANTAGE' THEN 'ADVANTAGE Player 2'
-                              WHEN 'GAME FOURTY' THEN 'GAME Player 1'
-                              WHEN 'FOURTY GAME' THEN 'GAME Player 2'
-                              ELSE score ).
-  ENDMETHOD.
-
   METHOD report_the_initial_score.
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE LOVE| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE LOVE| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_one_scored_once.
     player2->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE FIFTEEN| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE FIFTEEN| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_one_scores_twice.
     DO 2 TIMES.
       player2->score( ).
     ENDDO.
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE THIRTY| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE THIRTY| act = cut->display( player_1 = player1 player_2 = player2  ) ).
   ENDMETHOD.
 
   METHOD player_2_scored_once.
     player1->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |FIFTEEN LOVE| act = score( )  ).
+    cl_abap_unit_assert=>assert_equals( exp = |FIFTEEN LOVE| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_2_scored_3_times.
     DO 3 TIMES.
       player2->score( ).
     ENDDO.
-    cl_abap_unit_assert=>assert_equals( exp = |LOVE FOURTY| act = score( )  ).
+    cl_abap_unit_assert=>assert_equals( exp = |LOVE FOURTY| act = cut->display( player_1 = player1 player_2 = player2 )  ).
   ENDMETHOD.
 
   METHOD both_players_score_3_times.
@@ -166,7 +189,7 @@ CLASS tc_tennis IMPLEMENTATION.
       player1->score( ).
       player2->score( ).
     ENDDO.
-    cl_abap_unit_assert=>assert_equals( exp = |DEUCE| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |DEUCE| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_one_advantage.
@@ -175,7 +198,7 @@ CLASS tc_tennis IMPLEMENTATION.
       player2->score( ).
     ENDDO.
     player1->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 1| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 1| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_two_advantage.
@@ -184,7 +207,7 @@ CLASS tc_tennis IMPLEMENTATION.
       player2->score( ).
     ENDDO.
     player2->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 2| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |ADVANTAGE Player 2| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_one_win.
@@ -194,7 +217,7 @@ CLASS tc_tennis IMPLEMENTATION.
     ENDDO.
     player1->score( ).
     player1->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 1| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 1| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
   METHOD player_two_win.
@@ -204,7 +227,7 @@ CLASS tc_tennis IMPLEMENTATION.
     ENDDO.
     player2->score( ).
     player2->score( ).
-    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 2| act = score( ) ).
+    cl_abap_unit_assert=>assert_equals( exp = |GAME Player 2| act = cut->display( player_1 = player1 player_2 = player2 ) ).
   ENDMETHOD.
 
 ENDCLASS.
