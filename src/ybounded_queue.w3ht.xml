@@ -6,20 +6,14 @@
    <TEXT>Website Bounded Queue</TEXT>
    <PARAMS>
     <WWWPARAMS>
-     <RELID>HT</RELID>
-     <OBJID>YBOUNDED_QUEUE</OBJID>
      <NAME>fileextension</NAME>
      <VALUE>.html</VALUE>
     </WWWPARAMS>
     <WWWPARAMS>
-     <RELID>HT</RELID>
-     <OBJID>YBOUNDED_QUEUE</OBJID>
      <NAME>filename</NAME>
      <VALUE>bounded_queue.html</VALUE>
     </WWWPARAMS>
     <WWWPARAMS>
-     <RELID>HT</RELID>
-     <OBJID>YBOUNDED_QUEUE</OBJID>
      <NAME>mimetype</NAME>
      <VALUE>text/html</VALUE>
     </WWWPARAMS>
