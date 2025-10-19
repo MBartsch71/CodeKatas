@@ -30,3 +30,6 @@ This is a collection of Code Katas realized in ABAP.
 - Word Wrap
   - Program name: [YMBH_WORD_WRAP](src/ymbh_word_wrap.prog.abap)
   - Program name: [YMBH_WORD_WRAP_2](src/ymbh_word_wrap_2.prog.abap)
+ 
+- Video Store ( Clean Craftsmanship )
+  - Program name: [YMBH_VIDEO_STORE](src/ymbh_video_store.prog.abap)
